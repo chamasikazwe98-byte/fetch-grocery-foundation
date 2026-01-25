@@ -23,17 +23,27 @@ const DriverDashboard = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      // Fetch available (pending) orders using secure view
-      // This view only exposes non-sensitive order data (no addresses/locations)
-      const { data: pending } = await supabase
-        .from('pending_orders_for_drivers')
-        .select('*, supermarket:supermarkets(id, name, branch, address)')
-        .order('created_at', { ascending: false });
+      // Fetch available (pending) orders using secure RPC function
+      // This function only exposes non-sensitive order data (no addresses/customer info)
+      const { data: pending } = await supabase.rpc('get_pending_orders_for_drivers');
 
       if (pending) {
         // Map to Order type with limited fields
         setAvailableOrders(pending.map((p: any) => ({
-          ...p,
+          id: p.id,
+          supermarket_id: p.supermarket_id,
+          supermarket: {
+            id: p.supermarket_id,
+            name: p.supermarket_name,
+            branch: p.supermarket_branch,
+            address: p.supermarket_address,
+          },
+          delivery_zone_id: p.delivery_zone_id,
+          subtotal: p.subtotal,
+          zone_fee: p.zone_fee,
+          driver_payout: p.driver_payout,
+          requires_car_driver: p.requires_car_driver,
+          created_at: p.created_at,
           status: 'pending',
           delivery_address: 'Address shown after acceptance', // Hidden for privacy
         })) as Order[]);
