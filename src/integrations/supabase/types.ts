@@ -508,6 +508,23 @@ export type Database = {
         }
         Returns: string
       }
+      get_pending_orders_for_drivers: {
+        Args: never
+        Returns: {
+          created_at: string
+          delivery_zone_id: string
+          driver_payout: number
+          id: string
+          requires_car_driver: boolean
+          subtotal: number
+          supermarket_address: string
+          supermarket_branch: string
+          supermarket_id: string
+          supermarket_name: string
+          zone_fee: number
+          zone_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
