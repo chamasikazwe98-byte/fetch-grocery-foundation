@@ -14,16 +14,425 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          created_at: string
+          debug_mode: boolean | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          debug_mode?: boolean | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          debug_mode?: boolean | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      delivery_zones: {
+        Row: {
+          created_at: string
+          description: string | null
+          fee: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fee: number
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fee?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      driver_payouts: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          driver_id: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          driver_id: string
+          id?: string
+          order_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          driver_id?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          cancellation_reason: string | null
+          created_at: string
+          customer_id: string
+          delivery_address: string
+          delivery_latitude: number | null
+          delivery_longitude: number | null
+          delivery_zone_id: string | null
+          driver_id: string | null
+          driver_payout: number | null
+          id: string
+          notes: string | null
+          receipt_image_url: string | null
+          requires_car_driver: boolean | null
+          service_fee: number
+          status: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          supermarket_id: string
+          total: number
+          updated_at: string
+          zone_fee: number
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          created_at?: string
+          customer_id: string
+          delivery_address: string
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
+          delivery_zone_id?: string | null
+          driver_id?: string | null
+          driver_payout?: number | null
+          id?: string
+          notes?: string | null
+          receipt_image_url?: string | null
+          requires_car_driver?: boolean | null
+          service_fee: number
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal: number
+          supermarket_id: string
+          total: number
+          updated_at?: string
+          zone_fee: number
+        }
+        Update: {
+          cancellation_reason?: string | null
+          created_at?: string
+          customer_id?: string
+          delivery_address?: string
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
+          delivery_zone_id?: string | null
+          driver_id?: string | null
+          driver_payout?: number | null
+          id?: string
+          notes?: string | null
+          receipt_image_url?: string | null
+          requires_car_driver?: boolean | null
+          service_fee?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          subtotal?: number
+          supermarket_id?: string
+          total?: number
+          updated_at?: string
+          zone_fee?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_supermarket_id_fkey"
+            columns: ["supermarket_id"]
+            isOneToOne: false
+            referencedRelation: "supermarkets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean | null
+          name: string
+          price: number
+          supermarket_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean | null
+          name: string
+          price: number
+          supermarket_id: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean | null
+          name?: string
+          price?: number
+          supermarket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_supermarket_id_fkey"
+            columns: ["supermarket_id"]
+            isOneToOne: false
+            referencedRelation: "supermarkets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_available: boolean | null
+          latitude: number | null
+          longitude: number | null
+          phone: string | null
+          updated_at: string
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
+          wallet_balance: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_available?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          updated_at?: string
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
+          wallet_balance?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_available?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          phone?: string | null
+          updated_at?: string
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
+          wallet_balance?: number | null
+        }
+        Relationships: []
+      }
+      supermarkets: {
+        Row: {
+          address: string | null
+          branch: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          branch?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+        }
+        Update: {
+          address?: string | null
+          branch?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          latitude?: number
+          longitude?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "customer" | "driver" | "admin"
+      order_status:
+        | "pending"
+        | "accepted"
+        | "shopping"
+        | "ready_for_pickup"
+        | "in_transit"
+        | "delivered"
+        | "cancelled"
+      vehicle_type: "bicycle" | "motorcycle" | "car"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +559,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["customer", "driver", "admin"],
+      order_status: [
+        "pending",
+        "accepted",
+        "shopping",
+        "ready_for_pickup",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ],
+      vehicle_type: ["bicycle", "motorcycle", "car"],
+    },
   },
 } as const
