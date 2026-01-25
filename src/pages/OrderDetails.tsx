@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus, Profile } from '@/lib/types';
 import { format } from 'date-fns';
@@ -48,10 +47,10 @@ const OrderDetails = () => {
           setOrderItems(itemsData as OrderItem[]);
         }
 
-        // Fetch driver if assigned
+        // Fetch driver if assigned - use public_profiles view for limited info
         if (orderData.driver_id) {
           const { data: driverData } = await supabase
-            .from('profiles')
+            .from('public_profiles')
             .select('*')
             .eq('id', orderData.driver_id)
             .single();
@@ -163,27 +162,18 @@ const OrderDetails = () => {
       {driver && (
         <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
           <h3 className="font-semibold mb-3">Your Driver</h3>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                {driver.avatar_url ? (
-                  <img src={driver.avatar_url} alt={driver.full_name || ''} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <span className="text-xl">👤</span>
-                )}
-              </div>
-              <div>
-                <p className="font-medium">{driver.full_name}</p>
-                <p className="text-sm text-muted-foreground capitalize">{driver.vehicle_type || 'Driver'}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              {driver.avatar_url ? (
+                <img src={driver.avatar_url} alt={driver.full_name || ''} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span className="text-xl">👤</span>
+              )}
             </div>
-            {driver.phone && (
-              <Button size="icon" variant="outline" asChild>
-                <a href={`tel:${driver.phone}`}>
-                  <Phone className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
+            <div>
+              <p className="font-medium">{driver.full_name}</p>
+              <p className="text-sm text-muted-foreground">Driver</p>
+            </div>
           </div>
         </div>
       )}

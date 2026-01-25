@@ -23,18 +23,23 @@ const DriverDashboard = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      // Fetch available (pending) orders
+      // Fetch available (pending) orders using secure view
+      // This view only exposes non-sensitive order data (no addresses/locations)
       const { data: pending } = await supabase
-        .from('orders')
-        .select('*, supermarket:supermarkets(*)')
-        .eq('status', 'pending')
+        .from('pending_orders_for_drivers')
+        .select('*, supermarket:supermarkets(id, name, branch, address)')
         .order('created_at', { ascending: false });
 
       if (pending) {
-        setAvailableOrders(pending as Order[]);
+        // Map to Order type with limited fields
+        setAvailableOrders(pending.map((p: any) => ({
+          ...p,
+          status: 'pending',
+          delivery_address: 'Address shown after acceptance', // Hidden for privacy
+        })) as Order[]);
       }
 
-      // Fetch my active orders
+      // Fetch my active orders (full details visible to assigned driver)
       if (user) {
         const { data: active } = await supabase
           .from('orders')
@@ -89,19 +94,16 @@ const DriverDashboard = () => {
   };
 
   const handleAcceptOrder = async (orderId: string) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({
-        driver_id: user?.id,
-        status: 'accepted',
-      })
-      .eq('id', orderId)
-      .eq('status', 'pending'); // Only if still pending
+    // Use secure server-side function for accepting orders
+    // This prevents race conditions and validates driver role
+    const { error } = await supabase.rpc('accept_order', {
+      p_order_id: orderId,
+    });
 
     if (error) {
       toast({
         title: 'Error',
-        description: 'Order may have been taken by another driver',
+        description: error.message || 'Order may have been taken by another driver',
         variant: 'destructive',
       });
     } else {
@@ -212,7 +214,7 @@ const DriverDashboard = () => {
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                   <MapPin className="h-4 w-4" />
-                  <span className="line-clamp-1">{order.delivery_address}</span>
+                  <span className="line-clamp-1 italic">Address revealed after acceptance</span>
                 </div>
 
                 <div className="flex items-center justify-between">
