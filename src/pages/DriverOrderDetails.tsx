@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { Order, OrderItem, Profile, OrderStatus } from '@/lib/types';
 
 const statusFlow: OrderStatus[] = ['accepted', 'shopping', 'ready_for_pickup', 'in_transit', 'delivered'];
@@ -14,6 +15,7 @@ const DriverOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -37,7 +39,20 @@ const DriverOrderDetails = () => {
 
       if (orderData) {
         setOrder(orderData as Order);
-        setReceiptImage(orderData.receipt_image_url);
+        
+        // If receipt exists, get signed URL for display
+        if (orderData.receipt_image_url && !orderData.receipt_image_url.startsWith('data:')) {
+          const { data: urlData } = await supabase.storage
+            .from('receipts')
+            .createSignedUrl(orderData.receipt_image_url, 3600); // 1 hour
+          
+          if (urlData?.signedUrl) {
+            setReceiptImage(urlData.signedUrl);
+          }
+        } else {
+          // Legacy base64 data (for backwards compatibility)
+          setReceiptImage(orderData.receipt_image_url);
+        }
 
         // Fetch order items
         const { data: itemsData } = await supabase
@@ -69,35 +84,71 @@ const DriverOrderDetails = () => {
 
   const handleReceiptUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !order) return;
+    if (!file || !order || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid File',
+        description: 'Please upload an image file (JPG, PNG, etc.)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please upload an image smaller than 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsUploading(true);
 
     try {
-      // For demo purposes, we'll use a data URL
-      // In production, you'd upload to Supabase Storage
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        
-        const { error } = await supabase
-          .from('orders')
-          .update({ receipt_image_url: base64 })
-          .eq('id', order.id);
+      // Generate unique file path: {driver_id}/{order_id}/{timestamp}.jpg
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `${user.id}/${order.id}/${Date.now()}.${fileExt}`;
 
-        if (error) throw error;
-
-        setReceiptImage(base64);
-        toast({
-          title: 'Receipt Uploaded',
-          description: 'You can now start the delivery',
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
         });
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
+
+      if (uploadError) throw uploadError;
+
+      // Store the path in the database (not base64)
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ receipt_image_url: filePath })
+        .eq('id', order.id);
+
+      if (updateError) throw updateError;
+
+      // Get signed URL for immediate display
+      const { data: urlData } = await supabase.storage
+        .from('receipts')
+        .createSignedUrl(filePath, 3600);
+
+      if (urlData?.signedUrl) {
+        setReceiptImage(urlData.signedUrl);
+      }
+
+      toast({
+        title: 'Receipt Uploaded',
+        description: 'You can now start the delivery',
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
       toast({
         title: 'Upload Failed',
-        description: 'Failed to upload receipt. Please try again.',
+        description: error?.message || 'Failed to upload receipt. Please try again.',
         variant: 'destructive',
       });
     } finally {
