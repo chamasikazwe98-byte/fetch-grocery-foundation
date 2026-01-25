@@ -9,7 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role: 'customer' | 'driver') => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, role: 'customer' | 'driver') => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -105,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: window.location.origin,
           data: {
             full_name: fullName,
+            role: role, // Only 'customer' or 'driver' - server validates this
           },
         },
       });
