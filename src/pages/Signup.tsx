@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Mail, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
+import { ShoppingBag, Mail, Lock, Eye, EyeOff, Loader2, User, Car, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+type SignupRole = 'customer' | 'driver';
 
 const Signup = () => {
   const [fullName, setFullName] = useState('');
@@ -13,6 +16,7 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<SignupRole>('customer');
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const { toast } = useToast();
@@ -41,7 +45,7 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, role);
 
     if (error) {
       toast({
@@ -71,7 +75,65 @@ const Signup = () => {
         <p className="text-white/80 mt-1">Join Fetch today</p>
       </div>
 
+      {/* Form */}
       <div className="flex-1 px-6 py-6 -mt-6 bg-background rounded-t-3xl">
+        {/* Role Toggle */}
+        <div className="mb-6">
+          <Label className="text-base mb-3 block">I am a...</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setRole('customer')}
+              className={cn(
+                'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+                role === 'customer'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground/30'
+              )}
+            >
+              <div
+                className={cn(
+                  'p-3 rounded-full',
+                  role === 'customer' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                )}
+              >
+                <ShoppingCart className="h-6 w-6" />
+              </div>
+              <span className={cn('font-semibold', role === 'customer' && 'text-primary')}>
+                Customer
+              </span>
+              <span className="text-xs text-muted-foreground text-center">
+                Order groceries for delivery
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRole('driver')}
+              className={cn(
+                'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all',
+                role === 'driver'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground/30'
+              )}
+            >
+              <div
+                className={cn(
+                  'p-3 rounded-full',
+                  role === 'driver' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                )}
+              >
+                <Car className="h-6 w-6" />
+              </div>
+              <span className={cn('font-semibold', role === 'driver' && 'text-primary')}>
+                Driver
+              </span>
+              <span className="text-xs text-muted-foreground text-center">
+                Deliver orders & earn money
+              </span>
+            </button>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
