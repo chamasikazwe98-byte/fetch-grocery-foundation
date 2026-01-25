@@ -99,15 +99,11 @@ const Dashboard = () => {
   };
 
   // Redirect drivers to their dashboard
-  if (hasRole('driver')) {
-    navigate('/driver', { replace: true });
-    return null;
-  }
-
-  if (hasRole('admin')) {
-    navigate('/admin', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (hasRole('driver')) {
+      navigate('/driver', { replace: true });
+    }
+  }, [hasRole, navigate]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
