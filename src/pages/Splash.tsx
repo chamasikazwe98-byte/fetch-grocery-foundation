@@ -5,13 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Splash = () => {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { user, roles, isLoading } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!isLoading) {
         if (user) {
-          navigate('/dashboard', { replace: true });
+          // Role-based redirect
+          if (roles.includes('driver')) {
+            navigate('/driver', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
         } else {
           navigate('/login', { replace: true });
         }
@@ -19,7 +24,7 @@ const Splash = () => {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [navigate, user, isLoading]);
+  }, [navigate, user, roles, isLoading]);
 
   return (
     <div className="min-h-screen gradient-splash flex flex-col items-center justify-center">
