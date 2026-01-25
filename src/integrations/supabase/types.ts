@@ -122,6 +122,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "driver_payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pending_orders_for_drivers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       order_items: {
@@ -158,6 +165,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pending_orders_for_drivers"
             referencedColumns: ["id"]
           },
           {
@@ -411,9 +425,89 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pending_orders_for_drivers: {
+        Row: {
+          created_at: string | null
+          delivery_zone_id: string | null
+          driver_payout: number | null
+          id: string | null
+          requires_car_driver: boolean | null
+          subtotal: number | null
+          supermarket_id: string | null
+          zone_fee: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_zone_id?: string | null
+          driver_payout?: number | null
+          id?: string | null
+          requires_car_driver?: boolean | null
+          subtotal?: number | null
+          supermarket_id?: string | null
+          zone_fee?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_zone_id?: string | null
+          driver_payout?: number | null
+          id?: string | null
+          requires_car_driver?: boolean | null
+          subtotal?: number | null
+          supermarket_id?: string | null
+          zone_fee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_supermarket_id_fkey"
+            columns: ["supermarket_id"]
+            isOneToOne: false
+            referencedRelation: "supermarkets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      accept_order: { Args: { p_order_id: string }; Returns: boolean }
+      complete_order_delivery: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
+      create_secure_order: {
+        Args: {
+          p_delivery_address: string
+          p_delivery_zone_id: string
+          p_items: Json
+          p_notes: string
+          p_supermarket_id: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

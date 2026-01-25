@@ -86,41 +86,24 @@ const Cart = () => {
     setIsSubmitting(true);
 
     try {
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          customer_id: user.id,
-          supermarket_id: supermarketId,
-          delivery_zone_id: selectedZone,
-          delivery_address: deliveryAddress,
-          subtotal: subtotal,
-          service_fee: serviceFee,
-          zone_fee: zoneFee,
-          total: orderTotal,
-          driver_payout: zoneFee * 0.8, // 80% of zone fee
-          notes: notes || null,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
+      // Prepare items for server-side validation
       const orderItems = items.map((item) => ({
-        order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
-        unit_price: item.product.price,
-        total_price: item.product.price * item.quantity,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      // Use secure server-side function for order creation
+      // This validates all prices and calculations on the server
+      const { data: orderId, error: orderError } = await supabase
+        .rpc('create_secure_order', {
+          p_supermarket_id: supermarketId,
+          p_delivery_zone_id: selectedZone,
+          p_delivery_address: deliveryAddress,
+          p_notes: notes || null,
+          p_items: orderItems,
+        });
 
-      if (itemsError) throw itemsError;
+      if (orderError) throw orderError;
 
       clearCart();
 
@@ -129,7 +112,7 @@ const Cart = () => {
         description: 'Your order has been submitted successfully.',
       });
 
-      navigate(`/orders/${order.id}`);
+      navigate(`/orders/${orderId}`);
     } catch (error) {
       console.error('Checkout error:', error);
       toast({

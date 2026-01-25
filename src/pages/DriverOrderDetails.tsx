@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Banknote } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -49,9 +49,9 @@ const DriverOrderDetails = () => {
           setOrderItems(itemsData as OrderItem[]);
         }
 
-        // Fetch customer
+        // Fetch customer - use public_profiles view for limited info (name, avatar only)
         const { data: customerData } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('*')
           .eq('id', orderData.customer_id)
           .single();
@@ -121,31 +121,39 @@ const DriverOrderDetails = () => {
     setIsUpdating(true);
 
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', order.id);
-
-      if (error) throw error;
-
-      setOrder({ ...order, status: newStatus });
-
+      // Use secure server-side function for delivery completion
+      // This atomically updates order status, creates payout record, and updates wallet
       if (newStatus === 'delivered') {
+        const { error } = await supabase.rpc('complete_order_delivery', {
+          p_order_id: order.id,
+        });
+
+        if (error) throw error;
+
         toast({
           title: 'Order Delivered! 🎉',
           description: `You earned K${order.driver_payout?.toFixed(2)}`,
         });
         navigate('/driver');
       } else {
+        // For other status updates, use direct update
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', order.id);
+
+        if (error) throw error;
+
+        setOrder({ ...order, status: newStatus });
         toast({
           title: 'Status Updated',
           description: `Order is now "${newStatus.replace('_', ' ')}"`,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Update Failed',
-        description: 'Failed to update order status',
+        description: error?.message || 'Failed to update order status',
         variant: 'destructive',
       });
     } finally {
@@ -259,23 +267,18 @@ const DriverOrderDetails = () => {
       {/* Customer Info */}
       <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
         <h3 className="font-semibold mb-3">Customer</h3>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              👤
-            </div>
-            <div>
-              <p className="font-medium">{customer?.full_name || 'Customer'}</p>
-              <p className="text-sm text-muted-foreground">{customer?.phone || 'No phone'}</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            {customer?.avatar_url ? (
+              <img src={customer.avatar_url} alt={customer?.full_name || ''} className="w-full h-full rounded-full object-cover" />
+            ) : (
+              '👤'
+            )}
           </div>
-          {customer?.phone && (
-            <Button size="icon" variant="outline" asChild>
-              <a href={`tel:${customer.phone}`}>
-                <Phone className="h-4 w-4" />
-              </a>
-            </Button>
-          )}
+          <div>
+            <p className="font-medium">{customer?.full_name || 'Customer'}</p>
+            <p className="text-sm text-muted-foreground">Customer</p>
+          </div>
         </div>
       </div>
 
