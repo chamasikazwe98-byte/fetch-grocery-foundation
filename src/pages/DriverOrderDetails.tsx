@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Order, OrderItem, Profile, OrderStatus } from '@/lib/types';
+import { compressImage, getFileSizeInMB } from '@/lib/imageCompression';
+import { useDriverLocationTracker } from '@/hooks/useDriverLocationTracker';
 
 const statusFlow: OrderStatus[] = ['accepted', 'shopping', 'ready_for_pickup', 'in_transit', 'delivered'];
 
@@ -26,6 +28,16 @@ const DriverOrderDetails = () => {
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showTillRequest, setShowTillRequest] = useState(false);
+
+  // Track driver location when order is accepted and not delivered
+  const shouldTrackLocation = order && 
+    ['accepted', 'shopping', 'ready_for_pickup', 'in_transit'].includes(order.status);
+  
+  useDriverLocationTracker({
+    orderId: id || null,
+    isActive: !!shouldTrackLocation,
+    intervalMs: 30000, // Send location every 30 seconds
+  });
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -96,29 +108,46 @@ const DriverOrderDetails = () => {
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'File Too Large',
-        description: 'Please upload an image smaller than 5MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsUploading(true);
 
     try {
-      // Generate unique file path: {driver_id}/{order_id}/{timestamp}.jpg
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const filePath = `${user.id}/${order.id}/${Date.now()}.${fileExt}`;
+      // Compress image to max 1200px width and 70% quality
+      toast({
+        title: 'Processing Image',
+        description: 'Compressing image for upload...',
+      });
 
-      // Upload to Supabase Storage
+      const compressedBlob = await compressImage(file, {
+        maxWidth: 1200,
+        maxHeight: 1600,
+        quality: 0.7,
+        mimeType: 'image/jpeg',
+      });
+
+      const compressedSizeMB = getFileSizeInMB(compressedBlob);
+      console.log(`Original: ${getFileSizeInMB(file).toFixed(2)}MB, Compressed: ${compressedSizeMB.toFixed(2)}MB`);
+
+      // Final size check (should always be under 5MB after compression)
+      if (compressedSizeMB > 5) {
+        toast({
+          title: 'Image Too Large',
+          description: 'Could not compress image below 5MB. Please try a different image.',
+          variant: 'destructive',
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      // Generate unique file path: {driver_id}/{order_id}/{timestamp}.jpg
+      const filePath = `${user.id}/${order.id}/${Date.now()}.jpg`;
+
+      // Upload compressed image to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('receipts')
-        .upload(filePath, file, {
+        .upload(filePath, compressedBlob, {
           cacheControl: '3600',
           upsert: false,
+          contentType: 'image/jpeg',
         });
 
       if (uploadError) throw uploadError;

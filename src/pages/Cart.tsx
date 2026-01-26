@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryZone } from '@/lib/types';
+import { LocationPicker } from '@/components/LocationPicker';
+import { Coordinates } from '@/lib/geoUtils';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -21,8 +22,14 @@ const Cart = () => {
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [selectedZone, setSelectedZone] = useState<string>('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCoords, setDeliveryCoords] = useState<Coordinates | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLocationSelect = (coords: Coordinates, address: string) => {
+    setDeliveryCoords(coords);
+    setDeliveryAddress(address);
+  };
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -248,18 +255,27 @@ const Cart = () => {
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label>Delivery Address</Label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-            <Textarea
-              placeholder="Enter your full delivery address..."
-              value={deliveryAddress}
-              onChange={(e) => setDeliveryAddress(e.target.value)}
-              className="pl-10 min-h-[80px]"
-            />
+        {/* Location Picker with GPS and Address Search */}
+        <LocationPicker
+          onLocationSelect={handleLocationSelect}
+          initialAddress={deliveryAddress}
+        />
+
+        {/* Manual Address Override */}
+        {deliveryCoords && (
+          <div className="space-y-2">
+            <Label>Delivery Address Details</Label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <Textarea
+                placeholder="Add apartment number, building name, landmarks..."
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                className="pl-10 min-h-[80px]"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-2">
           <Label>Notes (optional)</Label>
