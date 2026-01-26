@@ -16,14 +16,18 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Role-based redirect after login
+  // Role-based redirect after login - wait for auth to fully load
   useEffect(() => {
-    if (user && !authLoading && roles.length > 0) {
-      if (roles.includes('driver')) {
-        navigate('/driver', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+    if (user && !authLoading) {
+      // Give a small delay to ensure roles are loaded
+      const timer = setTimeout(() => {
+        if (roles.includes('driver')) {
+          navigate('/driver', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }, 200);
+      return () => clearTimeout(timer);
     }
   }, [user, roles, authLoading, navigate]);
 

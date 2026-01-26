@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string): Promise<AppRole[]> => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -35,10 +35,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
-        return;
+      } else {
+        setProfile(profileData);
       }
-
-      setProfile(profileData);
 
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
@@ -47,12 +46,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (rolesError) {
         console.error('Error fetching roles:', rolesError);
-        return;
+        return [];
       }
 
-      setRoles(rolesData?.map(r => r.role as AppRole) || []);
+      const fetchedRoles = rolesData?.map(r => r.role as AppRole) || [];
+      setRoles(fetchedRoles);
+      return fetchedRoles;
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+      return [];
     }
   };
 
@@ -70,24 +72,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid race conditions with the trigger
-          setTimeout(() => fetchProfile(session.user.id), 100);
+          // Wait for profile/roles to load before setting isLoading to false
+          setTimeout(async () => {
+            await fetchProfile(session.user.id);
+            setIsLoading(false);
+          }, 100);
         } else {
           setProfile(null);
           setRoles([]);
+          setIsLoading(false);
         }
-
-        setIsLoading(false);
       }
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       }
 
       setIsLoading(false);
