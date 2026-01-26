@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus, Profile } from '@/lib/types';
 import { format } from 'date-fns';
+import { DriverTrackingMap } from '@/components/DriverTrackingMap';
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode; step: number }> = {
   pending: { label: 'Finding Driver', color: 'bg-yellow-500', icon: <Clock className="h-5 w-5" />, step: 1 },
@@ -175,6 +176,23 @@ const OrderDetails = () => {
               <p className="text-sm text-muted-foreground">Driver</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Real-time Driver Tracking Map */}
+      {order.status !== 'cancelled' && order.status !== 'delivered' && (
+        <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Navigation className="h-4 w-4 text-primary" />
+            Live Tracking
+          </h3>
+          <DriverTrackingMap
+            orderId={order.id}
+            driverId={order.driver_id}
+            deliveryLatitude={order.delivery_latitude}
+            deliveryLongitude={order.delivery_longitude}
+            vehicleType={driver?.vehicle_type}
+          />
         </div>
       )}
 

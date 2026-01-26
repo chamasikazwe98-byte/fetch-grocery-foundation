@@ -117,3 +117,16 @@ export interface AppSettings {
   created_at: string;
   updated_at: string;
 }
+
+export interface DriverLocation {
+  id: string;
+  driver_id: string;
+  order_id: string | null;
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+  created_at: string;
+  updated_at: string;
+}

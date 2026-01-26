@@ -108,6 +108,8 @@ const Cart = () => {
           p_delivery_address: deliveryAddress,
           p_notes: notes || null,
           p_items: orderItems,
+          p_delivery_latitude: deliveryCoords?.latitude || null,
+          p_delivery_longitude: deliveryCoords?.longitude || null,
         });
 
       if (orderError) throw orderError;
