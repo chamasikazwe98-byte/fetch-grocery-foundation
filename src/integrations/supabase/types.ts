@@ -575,6 +575,19 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              p_delivery_address: string
+              p_delivery_distance_km?: number
+              p_delivery_latitude?: number
+              p_delivery_longitude?: number
+              p_delivery_zone_id: string
+              p_items: Json
+              p_notes: string
+              p_supermarket_id: string
+            }
+            Returns: string
+          }
       get_pending_orders_for_drivers: {
         Args: never
         Returns: {

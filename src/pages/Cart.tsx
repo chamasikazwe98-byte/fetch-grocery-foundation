@@ -3,15 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { DeliveryZone } from '@/lib/types';
+import { Supermarket } from '@/lib/types';
 import { LocationPicker } from '@/components/LocationPicker';
-import { Coordinates } from '@/lib/geoUtils';
+import { Coordinates, calculateDistance } from '@/lib/geoUtils';
+
+// K10 per kilometer, minimum K30
+const RATE_PER_KM = 10;
+const MIN_DELIVERY_FEE = 30;
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -19,35 +22,53 @@ const Cart = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
-  const [selectedZone, setSelectedZone] = useState<string>('');
+  const [supermarket, setSupermarket] = useState<Supermarket | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryCoords, setDeliveryCoords] = useState<Coordinates | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
+
+  // Fetch supermarket details for distance calculation
+  useEffect(() => {
+    const fetchSupermarket = async () => {
+      if (items.length === 0) return;
+      
+      const supermarketId = items[0].product.supermarket_id;
+      const { data } = await supabase
+        .from('supermarkets')
+        .select('*')
+        .eq('id', supermarketId)
+        .single();
+      
+      if (data) {
+        setSupermarket(data as Supermarket);
+      }
+    };
+
+    fetchSupermarket();
+  }, [items]);
 
   const handleLocationSelect = (coords: Coordinates, address: string) => {
     setDeliveryCoords(coords);
     setDeliveryAddress(address);
+
+    // Calculate distance from supermarket to delivery location
+    if (supermarket) {
+      const distance = calculateDistance(
+        { latitude: supermarket.latitude, longitude: supermarket.longitude },
+        coords
+      );
+      setDeliveryDistance(distance);
+    }
   };
 
-  useEffect(() => {
-    const fetchZones = async () => {
-      const { data } = await supabase
-        .from('delivery_zones')
-        .select('*')
-        .order('fee');
-      
-      if (data) {
-        setDeliveryZones(data as DeliveryZone[]);
-      }
-    };
+  // Calculate delivery fee based on distance (K10/km, min K30)
+  const deliveryFee = deliveryDistance !== null 
+    ? Math.max(Math.round(deliveryDistance * RATE_PER_KM * 100) / 100, MIN_DELIVERY_FEE)
+    : MIN_DELIVERY_FEE;
 
-    fetchZones();
-  }, []);
-
-  const zoneFee = deliveryZones.find(z => z.id === selectedZone)?.fee || 0;
-  const orderTotal = subtotal + serviceFee + zoneFee;
+  const orderTotal = subtotal + serviceFee + deliveryFee;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -60,19 +81,19 @@ const Cart = () => {
       return;
     }
 
-    if (!selectedZone) {
+    if (!deliveryAddress.trim()) {
       toast({
-        title: 'Select delivery zone',
-        description: 'Please select a delivery zone to continue.',
+        title: 'Enter delivery address',
+        description: 'Please select or enter your delivery address.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (!deliveryAddress.trim()) {
+    if (!deliveryCoords) {
       toast({
-        title: 'Enter delivery address',
-        description: 'Please enter your delivery address.',
+        title: 'Set delivery location',
+        description: 'Please use GPS or search for your delivery location.',
         variant: 'destructive',
       });
       return;
@@ -87,9 +108,7 @@ const Cart = () => {
       return;
     }
 
-    // Get supermarket from first item
     const supermarketId = items[0].product.supermarket_id;
-
     setIsSubmitting(true);
 
     try {
@@ -100,16 +119,17 @@ const Cart = () => {
       }));
 
       // Use secure server-side function for order creation
-      // This validates all prices and calculations on the server
+      // Now passing distance for distance-based pricing
       const { data: orderId, error: orderError } = await supabase
         .rpc('create_secure_order', {
           p_supermarket_id: supermarketId,
-          p_delivery_zone_id: selectedZone,
+          p_delivery_zone_id: null, // No longer using zones
           p_delivery_address: deliveryAddress,
           p_notes: notes || null,
           p_items: orderItems,
-          p_delivery_latitude: deliveryCoords?.latitude || null,
-          p_delivery_longitude: deliveryCoords?.longitude || null,
+          p_delivery_latitude: deliveryCoords.latitude,
+          p_delivery_longitude: deliveryCoords.longitude,
+          p_delivery_distance_km: deliveryDistance,
         });
 
       if (orderError) throw orderError;
@@ -171,6 +191,16 @@ const Cart = () => {
           <h1 className="text-xl font-bold text-white">Your Cart</h1>
         </div>
       </div>
+
+      {/* Store Info */}
+      {supermarket && (
+        <div className="mx-4 mt-4 bg-card rounded-xl border border-border p-3">
+          <p className="font-medium">{supermarket.name}</p>
+          {supermarket.branch && (
+            <p className="text-sm text-muted-foreground">{supermarket.branch}</p>
+          )}
+        </div>
+      )}
 
       {/* Cart Items */}
       <div className="px-4 py-4 space-y-3">
@@ -241,27 +271,25 @@ const Cart = () => {
       <div className="px-4 py-4 space-y-4 border-t">
         <h2 className="font-semibold text-lg">Delivery Details</h2>
         
-        <div className="space-y-2">
-          <Label>Delivery Zone</Label>
-          <Select value={selectedZone} onValueChange={setSelectedZone}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select delivery zone" />
-            </SelectTrigger>
-            <SelectContent>
-              {deliveryZones.map((zone) => (
-                <SelectItem key={zone.id} value={zone.id}>
-                  {zone.name} - K{zone.fee.toFixed(2)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Location Picker with GPS and Address Search */}
         <LocationPicker
           onLocationSelect={handleLocationSelect}
           initialAddress={deliveryAddress}
         />
+
+        {/* Distance Info */}
+        {deliveryDistance !== null && (
+          <div className="bg-muted/50 rounded-lg p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Distance from store</span>
+              <span className="font-medium">{deliveryDistance.toFixed(1)} km</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-1">
+              <span className="text-muted-foreground">Delivery fee (K{RATE_PER_KM}/km)</span>
+              <span className="font-medium text-primary">K{deliveryFee.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Manual Address Override */}
         {deliveryCoords && (
@@ -301,8 +329,10 @@ const Cart = () => {
             <span>K{serviceFee.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Zone Fee</span>
-            <span>K{zoneFee.toFixed(2)}</span>
+            <span className="text-muted-foreground">
+              Delivery Fee {deliveryDistance !== null && `(${deliveryDistance.toFixed(1)}km)`}
+            </span>
+            <span>K{deliveryFee.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg pt-2 border-t">
             <span>Total</span>
@@ -313,7 +343,7 @@ const Cart = () => {
         <Button 
           className="w-full h-12" 
           onClick={handleCheckout}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !deliveryCoords}
         >
           {isSubmitting ? (
             <>
