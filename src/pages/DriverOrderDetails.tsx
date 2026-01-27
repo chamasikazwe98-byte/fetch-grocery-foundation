@@ -31,7 +31,7 @@ const DriverOrderDetails = () => {
 
   // Track driver location when order is accepted and not delivered
   const shouldTrackLocation = order && 
-    ['accepted', 'shopping', 'ready_for_pickup', 'in_transit'].includes(order.status);
+    ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit'].includes(order.status);
   
   useDriverLocationTracker({
     orderId: id || null,

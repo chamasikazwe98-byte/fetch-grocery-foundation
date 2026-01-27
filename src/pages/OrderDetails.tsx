@@ -130,10 +130,10 @@ const OrderDetails = () => {
           setOrderItems(itemsData as OrderItem[]);
         }
 
-        // Fetch driver if assigned - need full profile for vehicle_type
+        // Fetch driver if assigned - use public_profiles view for vehicle_type + name/avatar
         if (orderData.driver_id) {
           const { data: driverData } = await supabase
-            .from('profiles')
+            .from('public_profiles')
             .select('*')
             .eq('id', orderData.driver_id)
             .single();
@@ -149,19 +149,20 @@ const OrderDetails = () => {
 
     fetchOrder();
 
-    // Subscribe to order updates with improved real-time sync
+    // Subscribe to order updates with improved real-time sync (listen for UPDATE events)
     const channel = supabase
       .channel(`order-realtime-${id}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'orders',
           filter: `id=eq.${id}`,
         },
         (payload) => {
-          console.log('Order update received:', payload);
+          console.log('Order UPDATE received:', payload);
+          // Immediately refetch to get latest status + driver info
           fetchOrder();
         }
       )

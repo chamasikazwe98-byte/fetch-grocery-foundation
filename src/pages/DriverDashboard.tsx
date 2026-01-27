@@ -55,7 +55,7 @@ const DriverDashboard = () => {
           .from('orders')
           .select('*, supermarket:supermarkets(*)')
           .eq('driver_id', user.id)
-          .in('status', ['accepted', 'shopping', 'ready_for_pickup', 'in_transit'])
+          .in('status', ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit'])
           .order('created_at', { ascending: false });
 
         if (active) {
