@@ -1,25 +1,87 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle, Navigation, Store, ShoppingCart, CreditCard, Car, Bike } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus, Profile } from '@/lib/types';
 import { format } from 'date-fns';
 import { DriverTrackingMap } from '@/components/DriverTrackingMap';
 import { OrderCompletionModal } from '@/components/OrderCompletionModal';
+import { useToast } from '@/hooks/use-toast';
 
-const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode; step: number }> = {
-  pending: { label: 'Finding Driver', color: 'bg-yellow-500', icon: <Clock className="h-5 w-5" />, step: 1 },
-  accepted: { label: 'Driver En Route', color: 'bg-blue-500', icon: <Truck className="h-5 w-5" />, step: 2 },
-  shopping: { label: 'Shopping', color: 'bg-purple-500', icon: <Package className="h-5 w-5" />, step: 3 },
-  ready_for_pickup: { label: 'Ready for Pickup', color: 'bg-indigo-500', icon: <Package className="h-5 w-5" />, step: 4 },
-  in_transit: { label: 'On the Way', color: 'bg-primary', icon: <Truck className="h-5 w-5" />, step: 5 },
-  delivered: { label: 'Delivered', color: 'bg-green-500', icon: <CheckCircle className="h-5 w-5" />, step: 6 },
-  cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: <XCircle className="h-5 w-5" />, step: 0 },
+const statusConfig: Record<OrderStatus, { label: string; description: string; color: string; icon: React.ReactNode; step: number }> = {
+  pending: { 
+    label: 'Finding Driver', 
+    description: 'Looking for a driver near the store...',
+    color: 'bg-yellow-500', 
+    icon: <Clock className="h-5 w-5" />, 
+    step: 1 
+  },
+  accepted: { 
+    label: 'Driver Found', 
+    description: 'Driver found and headed to store',
+    color: 'bg-blue-500', 
+    icon: <Truck className="h-5 w-5" />, 
+    step: 2 
+  },
+  arrived_at_store: { 
+    label: 'At Store', 
+    description: 'Driver has arrived at the store',
+    color: 'bg-indigo-500', 
+    icon: <Store className="h-5 w-5" />, 
+    step: 3 
+  },
+  shopping: { 
+    label: 'Shopping', 
+    description: 'Driver is currently picking your items',
+    color: 'bg-purple-500', 
+    icon: <ShoppingCart className="h-5 w-5" />, 
+    step: 4 
+  },
+  shopping_completed: { 
+    label: 'Checking Out', 
+    description: 'Driver is checking out at the till',
+    color: 'bg-pink-500', 
+    icon: <CreditCard className="h-5 w-5" />, 
+    step: 5 
+  },
+  in_transit: { 
+    label: 'On the Way', 
+    description: 'Driver is on the way to you!',
+    color: 'bg-primary', 
+    icon: <Truck className="h-5 w-5" />, 
+    step: 6 
+  },
+  delivered: { 
+    label: 'Delivered', 
+    description: 'Order has been delivered',
+    color: 'bg-green-500', 
+    icon: <CheckCircle className="h-5 w-5" />, 
+    step: 7 
+  },
+  cancelled: { 
+    label: 'Cancelled', 
+    description: 'Order was cancelled',
+    color: 'bg-red-500', 
+    icon: <XCircle className="h-5 w-5" />, 
+    step: 0 
+  },
+};
+
+const statusNotifications: Record<OrderStatus, { title: string; description: string }> = {
+  pending: { title: '🔍 Finding Driver', description: 'We\'re looking for a driver near the store...' },
+  accepted: { title: '🚗 Driver Found!', description: 'Your driver is heading to the store now.' },
+  arrived_at_store: { title: '🏪 Driver Arrived', description: 'Your driver has arrived at the store.' },
+  shopping: { title: '🛒 Shopping Started', description: 'Your driver is now picking your items.' },
+  shopping_completed: { title: '💳 Checking Out', description: 'Your driver is at the checkout.' },
+  in_transit: { title: '🚚 On the Way!', description: 'Your order is being delivered now!' },
+  delivered: { title: '✅ Delivered!', description: 'Your order has been delivered. Enjoy!' },
+  cancelled: { title: '❌ Order Cancelled', description: 'Your order has been cancelled.' },
 };
 
 const OrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [driver, setDriver] = useState<Profile | null>(null);
@@ -40,11 +102,19 @@ const OrderDetails = () => {
       if (orderData) {
         const newOrder = orderData as Order;
         
-        // Check if status changed to delivered (for completion modal)
-        if (previousStatusRef.current && 
-            previousStatusRef.current !== 'delivered' && 
-            newOrder.status === 'delivered') {
-          setShowCompletionModal(true);
+        // Check if status changed and show notification
+        if (previousStatusRef.current && previousStatusRef.current !== newOrder.status) {
+          const notification = statusNotifications[newOrder.status];
+          toast({
+            title: notification.title,
+            description: notification.description,
+            duration: 5000,
+          });
+          
+          // Show completion modal when delivered
+          if (newOrder.status === 'delivered') {
+            setShowCompletionModal(true);
+          }
         }
         
         previousStatusRef.current = newOrder.status;
@@ -60,10 +130,10 @@ const OrderDetails = () => {
           setOrderItems(itemsData as OrderItem[]);
         }
 
-        // Fetch driver if assigned - use public_profiles view for limited info
+        // Fetch driver if assigned - need full profile for vehicle_type
         if (orderData.driver_id) {
           const { data: driverData } = await supabase
-            .from('public_profiles')
+            .from('profiles')
             .select('*')
             .eq('id', orderData.driver_id)
             .single();
@@ -85,14 +155,13 @@ const OrderDetails = () => {
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'orders',
           filter: `id=eq.${id}`,
         },
         (payload) => {
           console.log('Order update received:', payload);
-          // Immediately fetch fresh data on any change
           fetchOrder();
         }
       )
@@ -103,7 +172,7 @@ const OrderDetails = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, toast]);
 
   const handleCloseCompletionModal = () => {
     setShowCompletionModal(false);
@@ -112,6 +181,30 @@ const OrderDetails = () => {
   const handleViewOrders = () => {
     setShowCompletionModal(false);
     navigate('/orders');
+  };
+
+  const getVehicleIcon = (vehicleType: string | null) => {
+    switch (vehicleType) {
+      case 'car':
+        return <Car className="h-4 w-4" />;
+      case 'motorcycle':
+        return <Bike className="h-4 w-4" />;
+      default:
+        return <Truck className="h-4 w-4" />;
+    }
+  };
+
+  const getVehicleLabel = (vehicleType: string | null) => {
+    switch (vehicleType) {
+      case 'car':
+        return 'Car';
+      case 'motorcycle':
+        return 'Motorcycle';
+      case 'bicycle':
+        return 'Bicycle';
+      default:
+        return 'Vehicle';
+    }
   };
 
   if (isLoading || !order) {
@@ -123,7 +216,8 @@ const OrderDetails = () => {
   }
 
   const status = statusConfig[order.status];
-  const activeSteps = ['pending', 'accepted', 'shopping', 'ready_for_pickup', 'in_transit', 'delivered'];
+  const activeSteps = ['pending', 'accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit', 'delivered'];
+  const stepLabels = ['Finding', 'Accepted', 'At Store', 'Shopping', 'Checkout', 'En Route', 'Delivered'];
 
   return (
     <div className="min-h-screen bg-background pb-6">
@@ -143,39 +237,34 @@ const OrderDetails = () => {
           {status.icon}
           <div>
             <p className="font-semibold">{status.label}</p>
-            <p className="text-sm text-white/80">
-              {order.status === 'pending' && 'Looking for a driver...'}
-              {order.status === 'accepted' && 'Driver is heading to the store'}
-              {order.status === 'shopping' && 'Driver is shopping your items'}
-              {order.status === 'ready_for_pickup' && 'Items are ready, starting delivery soon'}
-              {order.status === 'in_transit' && 'Your order is on the way!'}
-              {order.status === 'delivered' && 'Order has been delivered'}
-              {order.status === 'cancelled' && order.cancellation_reason}
-            </p>
+            <p className="text-sm text-white/80">{status.description}</p>
           </div>
         </div>
       </div>
 
       {/* Progress Steps */}
       {order.status !== 'cancelled' && (
-        <div className="px-4 py-4">
-          <div className="flex justify-between">
+        <div className="px-4 py-4 overflow-x-auto">
+          <div className="flex justify-between min-w-[500px]">
             {activeSteps.map((step, index) => {
               const stepStatus = statusConfig[step as OrderStatus];
               const isActive = status.step >= stepStatus.step;
               const isCurrent = status.step === stepStatus.step;
               
               return (
-                <div key={step} className="flex flex-col items-center">
+                <div key={step} className="flex flex-col items-center flex-1">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                       isActive ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
-                    } ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                    } ${isCurrent ? 'ring-2 ring-primary ring-offset-2 scale-110' : ''}`}
                   >
-                    {index + 1}
+                    {isActive ? <CheckCircle className="h-4 w-4" /> : index + 1}
                   </div>
+                  <p className={`text-xs mt-1 text-center ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    {stepLabels[index]}
+                  </p>
                   {index < activeSteps.length - 1 && (
-                    <div className={`h-1 w-8 mt-4 ${isActive ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`h-0.5 w-full mt-2 ${isActive ? 'bg-primary' : 'bg-muted'}`} />
                   )}
                 </div>
               );
@@ -196,10 +285,22 @@ const OrderDetails = () => {
                 <span className="text-xl">👤</span>
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium">{driver.full_name}</p>
-              <p className="text-sm text-muted-foreground">Driver</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {getVehicleIcon(driver.vehicle_type)}
+                <span>{getVehicleLabel(driver.vehicle_type)}</span>
+              </div>
             </div>
+            {driver.vehicle_type && (
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                driver.vehicle_type === 'car' ? 'bg-blue-100 text-blue-700' : 
+                driver.vehicle_type === 'motorcycle' ? 'bg-orange-100 text-orange-700' : 
+                'bg-green-100 text-green-700'
+              }`}>
+                {getVehicleLabel(driver.vehicle_type)}
+              </div>
+            )}
           </div>
         </div>
       )}
