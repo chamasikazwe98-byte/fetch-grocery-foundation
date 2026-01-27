@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Package, Truck, CheckCircle, XCircle, Navigation } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem, OrderStatus, Profile } from '@/lib/types';
 import { format } from 'date-fns';
 import { DriverTrackingMap } from '@/components/DriverTrackingMap';
+import { OrderCompletionModal } from '@/components/OrderCompletionModal';
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode; step: number }> = {
   pending: { label: 'Finding Driver', color: 'bg-yellow-500', icon: <Clock className="h-5 w-5" />, step: 1 },
-  accepted: { label: 'Driver Accepted', color: 'bg-blue-500', icon: <Package className="h-5 w-5" />, step: 2 },
+  accepted: { label: 'Driver En Route', color: 'bg-blue-500', icon: <Truck className="h-5 w-5" />, step: 2 },
   shopping: { label: 'Shopping', color: 'bg-purple-500', icon: <Package className="h-5 w-5" />, step: 3 },
   ready_for_pickup: { label: 'Ready for Pickup', color: 'bg-indigo-500', icon: <Package className="h-5 w-5" />, step: 4 },
   in_transit: { label: 'On the Way', color: 'bg-primary', icon: <Truck className="h-5 w-5" />, step: 5 },
@@ -24,6 +24,8 @@ const OrderDetails = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [driver, setDriver] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const previousStatusRef = useRef<OrderStatus | null>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -36,7 +38,17 @@ const OrderDetails = () => {
         .single();
 
       if (orderData) {
-        setOrder(orderData as Order);
+        const newOrder = orderData as Order;
+        
+        // Check if status changed to delivered (for completion modal)
+        if (previousStatusRef.current && 
+            previousStatusRef.current !== 'delivered' && 
+            newOrder.status === 'delivered') {
+          setShowCompletionModal(true);
+        }
+        
+        previousStatusRef.current = newOrder.status;
+        setOrder(newOrder);
 
         // Fetch order items
         const { data: itemsData } = await supabase
@@ -67,27 +79,40 @@ const OrderDetails = () => {
 
     fetchOrder();
 
-    // Subscribe to order updates
+    // Subscribe to order updates with improved real-time sync
     const channel = supabase
-      .channel(`order-${id}`)
+      .channel(`order-realtime-${id}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'orders',
           filter: `id=eq.${id}`,
         },
-        () => {
+        (payload) => {
+          console.log('Order update received:', payload);
+          // Immediately fetch fresh data on any change
           fetchOrder();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [id]);
+
+  const handleCloseCompletionModal = () => {
+    setShowCompletionModal(false);
+  };
+
+  const handleViewOrders = () => {
+    setShowCompletionModal(false);
+    navigate('/orders');
+  };
 
   if (isLoading || !order) {
     return (
@@ -180,7 +205,7 @@ const OrderDetails = () => {
       )}
 
       {/* Real-time Driver Tracking Map */}
-      {order.status !== 'cancelled' && order.status !== 'delivered' && (
+      {order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'pending' && (
         <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Navigation className="h-4 w-4 text-primary" />
@@ -256,7 +281,7 @@ const OrderDetails = () => {
             <span>K{order.service_fee.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Zone Fee</span>
+            <span className="text-muted-foreground">Delivery Fee</span>
             <span>K{order.zone_fee.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg pt-2 border-t">
@@ -268,6 +293,13 @@ const OrderDetails = () => {
           Order placed on {format(new Date(order.created_at), 'MMMM d, yyyy • h:mm a')}
         </p>
       </div>
+
+      {/* Order Completion Modal */}
+      <OrderCompletionModal
+        isOpen={showCompletionModal}
+        onClose={handleCloseCompletionModal}
+        onViewOrders={handleViewOrders}
+      />
     </div>
   );
 };
