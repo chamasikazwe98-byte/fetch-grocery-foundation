@@ -11,7 +11,7 @@ import { Order, OrderItem, Profile, OrderStatus } from '@/lib/types';
 import { compressImage, getFileSizeInMB } from '@/lib/imageCompression';
 import { useDriverLocationTracker } from '@/hooks/useDriverLocationTracker';
 
-const statusFlow: OrderStatus[] = ['accepted', 'shopping', 'ready_for_pickup', 'in_transit', 'delivered'];
+const statusFlow: OrderStatus[] = ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit', 'delivered'];
 
 const DriverOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -250,8 +250,9 @@ const DriverOrderDetails = () => {
 
   const getNextStatusLabel = (status: OrderStatus): string => {
     switch (status) {
+      case 'arrived_at_store': return 'Arrived at Store';
       case 'shopping': return 'Start Shopping';
-      case 'ready_for_pickup': return 'Done Shopping';
+      case 'shopping_completed': return 'Done Shopping';
       case 'in_transit': return 'Start Delivery';
       case 'delivered': return 'Complete Delivery';
       default: return 'Next Step';
@@ -269,7 +270,7 @@ const DriverOrderDetails = () => {
   }
 
   const nextStatus = getNextStatus();
-  const canStartDelivery = order.status === 'ready_for_pickup';
+  const canStartDelivery = order.status === 'shopping_completed';
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -409,7 +410,7 @@ const DriverOrderDetails = () => {
       </div>
 
       {/* Receipt Upload */}
-      {(order.status === 'shopping' || order.status === 'ready_for_pickup') && (
+      {(order.status === 'shopping' || order.status === 'shopping_completed') && (
         <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Camera className="h-4 w-4" />

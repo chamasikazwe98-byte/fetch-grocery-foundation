@@ -629,7 +629,9 @@ export type Database = {
       order_status:
         | "pending"
         | "accepted"
+        | "arrived_at_store"
         | "shopping"
+        | "shopping_completed"
         | "ready_for_pickup"
         | "in_transit"
         | "delivered"
@@ -766,7 +768,9 @@ export const Constants = {
       order_status: [
         "pending",
         "accepted",
+        "arrived_at_store",
         "shopping",
+        "shopping_completed",
         "ready_for_pickup",
         "in_transit",
         "delivered",
