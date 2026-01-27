@@ -532,16 +532,19 @@ export type Database = {
           avatar_url: string | null
           full_name: string | null
           id: string | null
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Insert: {
           avatar_url?: string | null
           full_name?: string | null
           id?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Update: {
           avatar_url?: string | null
           full_name?: string | null
           id?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"] | null
         }
         Relationships: []
       }
