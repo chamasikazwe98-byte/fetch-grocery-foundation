@@ -555,6 +555,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: boolean
       }
+      confirm_order_payment: { Args: { p_order_id: string }; Returns: boolean }
       create_secure_order:
         | {
             Args: {
@@ -630,6 +631,7 @@ export type Database = {
     Enums: {
       app_role: "customer" | "driver" | "admin"
       order_status:
+        | "awaiting_payment"
         | "pending"
         | "accepted"
         | "arrived_at_store"
@@ -769,6 +771,7 @@ export const Constants = {
     Enums: {
       app_role: ["customer", "driver", "admin"],
       order_status: [
+        "awaiting_payment",
         "pending",
         "accepted",
         "arrived_at_store",

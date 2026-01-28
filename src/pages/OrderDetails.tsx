@@ -9,8 +9,15 @@ import { OrderCompletionModal } from '@/components/OrderCompletionModal';
 import { useToast } from '@/hooks/use-toast';
 
 const statusConfig: Record<OrderStatus, { label: string; description: string; color: string; icon: React.ReactNode; step: number }> = {
+  awaiting_payment: { 
+    label: 'Awaiting Payment', 
+    description: 'Complete payment to find a driver...',
+    color: 'bg-orange-500', 
+    icon: <Clock className="h-5 w-5" />, 
+    step: 0 
+  },
   pending: { 
-    label: 'Finding Driver', 
+    label: 'Payment Confirmed - Finding Driver', 
     description: 'Looking for a driver near the store...',
     color: 'bg-yellow-500', 
     icon: <Clock className="h-5 w-5" />, 
@@ -68,7 +75,8 @@ const statusConfig: Record<OrderStatus, { label: string; description: string; co
 };
 
 const statusNotifications: Record<OrderStatus, { title: string; description: string }> = {
-  pending: { title: '🔍 Finding Driver', description: 'We\'re looking for a driver near the store...' },
+  awaiting_payment: { title: '💳 Awaiting Payment', description: 'Complete your payment to find a driver.' },
+  pending: { title: '🔍 Payment Confirmed - Finding Driver', description: 'We\'re looking for a driver near the store...' },
   accepted: { title: '🚗 Driver Found!', description: 'Your driver is heading to the store now.' },
   arrived_at_store: { title: '🏪 Driver Arrived', description: 'Your driver has arrived at the store.' },
   shopping: { title: '🛒 Shopping Started', description: 'Your driver is now picking your items.' },

@@ -1,6 +1,6 @@
 export type AppRole = 'customer' | 'driver' | 'admin';
 export type VehicleType = 'bicycle' | 'motorcycle' | 'car';
-export type OrderStatus = 'pending' | 'accepted' | 'arrived_at_store' | 'shopping' | 'shopping_completed' | 'in_transit' | 'delivered' | 'cancelled';
+export type OrderStatus = 'awaiting_payment' | 'pending' | 'accepted' | 'arrived_at_store' | 'shopping' | 'shopping_completed' | 'in_transit' | 'delivered' | 'cancelled';
 
 export interface Profile {
   id: string;

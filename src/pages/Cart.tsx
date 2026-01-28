@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Supermarket } from '@/lib/types';
 import { LocationPicker } from '@/components/LocationPicker';
 import { Coordinates, calculateDistance } from '@/lib/geoUtils';
+import { PaymentConfirmationModal } from '@/components/PaymentConfirmationModal';
 
 // K10 per kilometer, minimum K30
 const RATE_PER_KM = 10;
@@ -28,6 +29,8 @@ const Cart = () => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   // Fetch supermarket details for distance calculation
   useEffect(() => {
@@ -134,14 +137,9 @@ const Cart = () => {
 
       if (orderError) throw orderError;
 
-      clearCart();
-
-      toast({
-        title: 'Order placed!',
-        description: 'Your order has been submitted successfully.',
-      });
-
-      navigate(`/orders/${orderId}`);
+      // Store orderId and show payment modal instead of navigating directly
+      setPendingOrderId(orderId);
+      setShowPaymentModal(true);
     } catch (error) {
       console.error('Checkout error:', error);
       toast({
@@ -152,6 +150,18 @@ const Cart = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    clearCart();
+
+    toast({
+      title: 'Order placed!',
+      description: 'Your order has been submitted successfully.',
+    });
+
+    navigate(`/orders/${pendingOrderId}`);
   };
 
   if (items.length === 0) {
@@ -355,6 +365,15 @@ const Cart = () => {
           )}
         </Button>
       </div>
+
+      {/* Payment Confirmation Modal */}
+      <PaymentConfirmationModal
+        isOpen={showPaymentModal}
+        orderId={pendingOrderId}
+        orderTotal={orderTotal}
+        onPaymentComplete={handlePaymentComplete}
+        onClose={() => setShowPaymentModal(false)}
+      />
     </div>
   );
 };
