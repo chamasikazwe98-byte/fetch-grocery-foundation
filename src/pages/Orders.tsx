@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Clock, CheckCircle, XCircle, Truck, Store, ShoppingCart, CreditCard } from 'lucide-react';
+import { ArrowLeft, Package, Clock, CheckCircle, XCircle, Truck, Store, ShoppingCart, CreditCard, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,8 @@ import { Order, OrderStatus } from '@/lib/types';
 import { format } from 'date-fns';
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: { label: 'Pending', color: 'bg-yellow-500', icon: <Clock className="h-4 w-4" /> },
+  awaiting_payment: { label: 'Awaiting Payment', color: 'bg-orange-500', icon: <Wallet className="h-4 w-4" /> },
+  pending: { label: 'Finding Driver', color: 'bg-yellow-500', icon: <Clock className="h-4 w-4" /> },
   accepted: { label: 'Accepted', color: 'bg-blue-500', icon: <Package className="h-4 w-4" /> },
   arrived_at_store: { label: 'At Store', color: 'bg-indigo-500', icon: <Store className="h-4 w-4" /> },
   shopping: { label: 'Shopping', color: 'bg-purple-500', icon: <ShoppingCart className="h-4 w-4" /> },

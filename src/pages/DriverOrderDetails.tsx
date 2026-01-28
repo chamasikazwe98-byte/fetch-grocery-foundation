@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Banknote } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Banknote, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -259,6 +259,14 @@ const DriverOrderDetails = () => {
     }
   };
 
+  // Open Google Maps with customer's coordinates
+  const handleNavigateToCustomer = () => {
+    if (order?.delivery_latitude && order?.delivery_longitude) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`;
+      window.open(url, '_blank');
+    }
+  };
+
   const isShoprite = order?.supermarket?.name?.toLowerCase().includes('shoprite');
 
   if (isLoading || !order) {
@@ -370,6 +378,17 @@ const DriverOrderDetails = () => {
           Delivery Address
         </h3>
         <p className="text-sm">{order.delivery_address}</p>
+        
+        {/* Navigate to Customer button - only shown when in_transit */}
+        {order.status === 'in_transit' && order.delivery_latitude && order.delivery_longitude && (
+          <Button 
+            className="w-full mt-3 bg-blue-600 hover:bg-blue-700" 
+            onClick={handleNavigateToCustomer}
+          >
+            <Navigation className="h-4 w-4 mr-2" />
+            Navigate to Customer
+          </Button>
+        )}
       </div>
 
       {/* Store */}
