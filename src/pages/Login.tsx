@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import fetchLogo from '@/assets/fetch-logo.png';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,10 +64,12 @@ const Login = () => {
   };
   return <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="gradient-primary py-12 px-6 flex flex-col items-center border-solid bg-teal-500">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm mb-4">
-          <ShoppingBag className="h-8 w-8 text-white" />
-        </div>
+      <div className="bg-foreground py-12 px-6 flex flex-col items-center">
+        <img 
+          src={fetchLogo} 
+          alt="Fetch!" 
+          className="h-16 w-auto object-contain mb-4"
+        />
         <h1 className="text-2xl font-bold text-white">Welcome back</h1>
         <p className="text-white/80 mt-1">Sign in to continue</p>
       </div>
