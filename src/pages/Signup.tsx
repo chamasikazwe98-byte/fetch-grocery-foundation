@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Mail, Lock, Eye, EyeOff, Loader2, User, Car, ShoppingCart } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Car, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import fetchLogo from '@/assets/fetch-logo.png';
 
 type SignupRole = 'customer' | 'driver';
 
@@ -67,10 +68,12 @@ const Signup = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="gradient-primary py-10 px-6 flex flex-col items-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm mb-3">
-          <ShoppingBag className="h-7 w-7 text-white" />
-        </div>
+      <div className="bg-foreground py-10 px-6 flex flex-col items-center">
+        <img 
+          src={fetchLogo} 
+          alt="Fetch!" 
+          className="h-14 w-auto object-contain mb-3"
+        />
         <h1 className="text-2xl font-bold text-white">Create account</h1>
         <p className="text-white/80 mt-1">Join Fetch today</p>
       </div>

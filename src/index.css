@@ -7,96 +7,106 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 215 25% 12%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 211 100% 50%;
+    /* Fetch Brand Red */
+    --primary: 0 85% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 211 80% 95%;
-    --secondary-foreground: 211 100% 40%;
+    --secondary: 0 30% 96%;
+    --secondary-foreground: 0 85% 35%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 15% 45%;
+    --muted: 0 5% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 211 100% 50%;
+    /* Fetch Brand Red for accent */
+    --accent: 0 85% 40%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 211 100% 50%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 85% 40%;
 
     --radius: 0.75rem;
 
-    /* Custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(211 100% 50%) 0%, hsl(225 100% 55%) 100%);
-    --gradient-splash: linear-gradient(180deg, hsl(211 100% 50%) 0%, hsl(225 100% 45%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    /* Custom tokens - Fetch Brand: Black & Red */
+    --gradient-primary: linear-gradient(135deg, hsl(0 85% 40%) 0%, hsl(0 70% 30%) 100%);
+    --gradient-splash: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 15%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
     
-    --shadow-soft: 0 2px 8px -2px hsl(215 25% 12% / 0.06);
-    --shadow-card: 0 4px 20px -4px hsl(215 25% 12% / 0.1);
-    --shadow-elevated: 0 12px 40px -12px hsl(215 25% 12% / 0.15);
-    --shadow-glow: 0 0 50px -15px hsl(211 100% 50% / 0.35);
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 10% / 0.06);
+    --shadow-card: 0 4px 20px -4px hsl(0 0% 10% / 0.1);
+    --shadow-elevated: 0 12px 40px -12px hsl(0 0% 10% / 0.15);
+    --shadow-glow: 0 0 50px -15px hsl(0 85% 40% / 0.35);
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 211 100% 50%;
+    --sidebar-foreground: 0 0% 26%;
+    --sidebar-primary: 0 85% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 211 80% 95%;
-    --sidebar-accent-foreground: 211 100% 40%;
-    --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-accent: 0 30% 96%;
+    --sidebar-accent-foreground: 0 85% 35%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 85% 40%;
+
+    /* Header uses light background for contrast with dark logo */
+    --header-background: 0 0% 100%;
+    --header-foreground: 0 0% 10%;
   }
 
   .dark {
-    --background: 215 30% 8%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
 
-    --card: 215 30% 12%;
-    --card-foreground: 210 20% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 215 30% 12%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 211 100% 55%;
+    /* Fetch Brand Red - slightly lighter for dark mode */
+    --primary: 0 80% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 30% 18%;
-    --secondary-foreground: 211 100% 60%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 80% 60%;
 
-    --muted: 215 30% 20%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 211 100% 55%;
+    --accent: 0 80% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 30% 20%;
-    --input: 215 30% 20%;
-    --ring: 211 100% 55%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 80% 50%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(211 100% 45%) 0%, hsl(225 100% 50%) 100%);
-    --gradient-splash: linear-gradient(180deg, hsl(211 100% 45%) 0%, hsl(225 100% 40%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(215 30% 12%) 0%, hsl(215 30% 14%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(0 80% 45%) 0%, hsl(0 70% 35%) 100%);
+    --gradient-splash: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 12%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 12%) 0%, hsl(0 0% 14%) 100%);
 
-    --sidebar-background: 215 30% 10%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 211 100% 55%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 30% 18%;
-    --sidebar-accent-foreground: 211 100% 60%;
-    --sidebar-border: 215 30% 20%;
-    --sidebar-ring: 211 100% 55%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 80% 60%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 0 80% 50%;
+
+    --header-background: 0 0% 8%;
+    --header-foreground: 0 0% 98%;
   }
 }
 
