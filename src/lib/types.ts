@@ -88,6 +88,10 @@ export interface Order {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  carrier_bags_count: number;
+  carrier_bags_total: number;
+  till_amount: number | null;
+  funds_confirmed: boolean;
   supermarket?: Supermarket;
   items?: OrderItem[];
   customer?: Profile;

@@ -12,6 +12,7 @@ import { Supermarket } from '@/lib/types';
 import { LocationPicker } from '@/components/LocationPicker';
 import { Coordinates, calculateDistance } from '@/lib/geoUtils';
 import { PaymentConfirmationModal } from '@/components/PaymentConfirmationModal';
+import { CarrierBagSelector, BAG_UNIT_PRICE } from '@/components/CarrierBagSelector';
 
 // K10 per kilometer, minimum K30
 const RATE_PER_KM = 10;
@@ -31,6 +32,7 @@ const Cart = () => {
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [carrierBagsCount, setCarrierBagsCount] = useState(0);
 
   // Fetch supermarket details for distance calculation
   useEffect(() => {
@@ -71,7 +73,10 @@ const Cart = () => {
     ? Math.max(Math.round(deliveryDistance * RATE_PER_KM * 100) / 100, MIN_DELIVERY_FEE)
     : MIN_DELIVERY_FEE;
 
-  const orderTotal = subtotal + serviceFee + deliveryFee;
+  // Calculate carrier bags total
+  const carrierBagsTotal = carrierBagsCount * BAG_UNIT_PRICE;
+
+  const orderTotal = subtotal + serviceFee + deliveryFee + carrierBagsTotal;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -122,7 +127,7 @@ const Cart = () => {
       }));
 
       // Use secure server-side function for order creation
-      // Now passing distance for distance-based pricing
+      // Now passing distance for distance-based pricing and carrier bags
       const { data: orderId, error: orderError } = await supabase
         .rpc('create_secure_order', {
           p_supermarket_id: supermarketId,
@@ -133,6 +138,7 @@ const Cart = () => {
           p_delivery_latitude: deliveryCoords.latitude,
           p_delivery_longitude: deliveryCoords.longitude,
           p_delivery_distance_km: deliveryDistance,
+          p_carrier_bags_count: carrierBagsCount,
         });
 
       if (orderError) throw orderError;
@@ -327,6 +333,11 @@ const Cart = () => {
         </div>
       </div>
 
+      {/* Carrier Bags Section - Before Order Summary */}
+      <div className="px-4 pb-4">
+        <CarrierBagSelector count={carrierBagsCount} onChange={setCarrierBagsCount} />
+      </div>
+
       {/* Order Summary - Fixed at bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 space-y-3">
         <div className="space-y-2 text-sm">
@@ -344,6 +355,14 @@ const Cart = () => {
             </span>
             <span>K{deliveryFee.toFixed(2)}</span>
           </div>
+          {carrierBagsCount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                Carrier Bags ({carrierBagsCount})
+              </span>
+              <span>K{carrierBagsTotal.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-bold text-lg pt-2 border-t">
             <span>Total</span>
             <span className="text-primary">K{orderTotal.toFixed(2)}</span>
