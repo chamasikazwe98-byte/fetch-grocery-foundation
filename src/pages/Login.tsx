@@ -65,11 +65,7 @@ const Login = () => {
   return <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="bg-foreground py-12 px-6 flex flex-col items-center">
-        <img 
-          src={fetchLogo} 
-          alt="Fetch!" 
-          className="h-16 w-auto object-contain mb-4"
-        />
+        <img alt="Fetch!" className="h-16 w-auto mb-4 object-cover" src="/lovable-uploads/c2e64bb2-6936-4462-ac65-6662e1ecce8a.png" />
         <h1 className="text-2xl font-bold text-white">Welcome back</h1>
         <p className="text-white/80 mt-1">Sign in to continue</p>
       </div>
