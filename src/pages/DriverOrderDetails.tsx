@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Banknote, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Phone, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Order, OrderItem, Profile, OrderStatus } from '@/lib/types';
 import { compressImage, getFileSizeInMB } from '@/lib/imageCompression';
 import { useDriverLocationTracker } from '@/hooks/useDriverLocationTracker';
+import { TillFundingDialog } from '@/components/driver/TillFundingDialog';
+import { LoadSafetyCheckbox } from '@/components/driver/LoadSafetyCheckbox';
 
 const statusFlow: OrderStatus[] = ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit', 'delivered'];
 
@@ -17,17 +18,19 @@ const DriverOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile: driverProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [customer, setCustomer] = useState<Profile | null>(null);
+  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showTillRequest, setShowTillRequest] = useState(false);
+  const [showTillFunding, setShowTillFunding] = useState(false);
+  const [loadSafetyConfirmed, setLoadSafetyConfirmed] = useState(false);
 
   // Track driver location when order is accepted and not delivered
   const shouldTrackLocation = order && 
@@ -50,7 +53,7 @@ const DriverOrderDetails = () => {
         .single();
 
       if (orderData) {
-        setOrder(orderData as Order);
+        setOrder(orderData as unknown as Order);
         
         // If receipt exists, get signed URL for display
         if (orderData.receipt_image_url && !orderData.receipt_image_url.startsWith('data:')) {
@@ -85,6 +88,17 @@ const DriverOrderDetails = () => {
 
         if (customerData) {
           setCustomer(customerData as Profile);
+        }
+
+        // Fetch customer phone from profiles (driver can see after accepting order)
+        const { data: phoneData } = await supabase
+          .from('profiles')
+          .select('phone')
+          .eq('id', orderData.customer_id)
+          .single();
+
+        if (phoneData?.phone) {
+          setCustomerPhone(phoneData.phone);
         }
       }
 
@@ -198,6 +212,16 @@ const DriverOrderDetails = () => {
       return;
     }
 
+    // Block "in_transit" if load safety not confirmed
+    if (newStatus === 'in_transit' && !loadSafetyConfirmed) {
+      toast({
+        title: 'Safety Confirmation Required',
+        description: 'Please confirm the load is secure before starting delivery',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsUpdating(true);
 
     try {
@@ -267,7 +291,31 @@ const DriverOrderDetails = () => {
     }
   };
 
+  // Call customer
+  const handleCallCustomer = () => {
+    if (customerPhone) {
+      window.location.href = `tel:${customerPhone}`;
+    } else {
+      toast({
+        title: 'Phone Not Available',
+        description: 'Customer phone number is not available.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const isShoprite = order?.supermarket?.name?.toLowerCase().includes('shoprite');
+  const fundsConfirmed = order?.funds_confirmed || false;
+
+  // For Shoprite, hide receipt upload until funds are confirmed
+  const canShowReceiptUpload = isShoprite 
+    ? fundsConfirmed && (order?.status === 'shopping' || order?.status === 'shopping_completed')
+    : (order?.status === 'shopping' || order?.status === 'shopping_completed');
+
+  // For Shoprite, hide "Done Shopping" button until funds are confirmed
+  const canAdvanceFromShopping = isShoprite
+    ? fundsConfirmed
+    : true;
 
   if (isLoading || !order) {
     return (
@@ -313,61 +361,55 @@ const DriverOrderDetails = () => {
         </div>
       </div>
 
-      {/* Shoprite Till Request */}
-      {isShoprite && order.status === 'shopping' && (
+      {/* Shoprite Till Request - Only when funds not yet confirmed */}
+      {isShoprite && order.status === 'shopping' && !fundsConfirmed && (
         <div className="mx-4 mb-4">
-          <Dialog open={showTillRequest} onOpenChange={setShowTillRequest}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full border-orange-300 text-orange-700 hover:bg-orange-50">
-                <Banknote className="h-4 w-4 mr-2" />
-                Request Funds for Till
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Till Funds Request</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <p className="font-medium text-orange-800">Amount Requested</p>
-                  <p className="text-2xl font-bold text-orange-700">K{order.subtotal.toFixed(2)}</p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This will simulate a Flutterwave disbursement to your mobile money account for cash withdrawal at the Shoprite till.
-                </p>
-                <Button 
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                  onClick={() => {
-                    toast({
-                      title: 'Funds Disbursed! 💰',
-                      description: `K${order.subtotal.toFixed(2)} sent via Mobile Money`,
-                    });
-                    setShowTillRequest(false);
-                  }}
-                >
-                  Confirm Disbursement
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            variant="outline" 
+            className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+            onClick={() => setShowTillFunding(true)}
+          >
+            💰 Request Funds for Till
+          </Button>
         </div>
       )}
 
-      {/* Customer Info */}
+      {/* Funds Confirmed Badge for Shoprite */}
+      {isShoprite && fundsConfirmed && (
+        <div className="mx-4 mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <span className="text-green-700 font-medium">Funds Received - K{order.till_amount?.toFixed(2)}</span>
+        </div>
+      )}
+
+      {/* Customer Info with Call Button */}
       <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
         <h3 className="font-semibold mb-3">Customer</h3>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            {customer?.avatar_url ? (
-              <img src={customer.avatar_url} alt={customer?.full_name || ''} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              '👤'
-            )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              {customer?.avatar_url ? (
+                <img src={customer.avatar_url} alt={customer?.full_name || ''} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                '👤'
+              )}
+            </div>
+            <div>
+              <p className="font-medium">{customer?.full_name || 'Customer'}</p>
+              {customerPhone && (
+                <p className="text-sm text-muted-foreground">{customerPhone}</p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="font-medium">{customer?.full_name || 'Customer'}</p>
-            <p className="text-sm text-muted-foreground">Customer</p>
-          </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="border-primary text-primary"
+            onClick={handleCallCustomer}
+          >
+            <Phone className="h-4 w-4 mr-1" />
+            Call
+          </Button>
         </div>
       </div>
 
@@ -422,14 +464,22 @@ const DriverOrderDetails = () => {
             </div>
           ))}
         </div>
-        <div className="mt-3 pt-3 border-t flex justify-between font-medium">
-          <span>Order Total</span>
-          <span>K{order.subtotal.toFixed(2)}</span>
+        <div className="mt-3 pt-3 border-t space-y-1">
+          <div className="flex justify-between text-sm">
+            <span>Order Subtotal</span>
+            <span>K{order.subtotal.toFixed(2)}</span>
+          </div>
+          {(order.carrier_bags_count || 0) > 0 && (
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Carrier Bags ({order.carrier_bags_count})</span>
+              <span>K{order.carrier_bags_total?.toFixed(2)}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Receipt Upload */}
-      {(order.status === 'shopping' || order.status === 'shopping_completed') && (
+      {/* Receipt Upload - Hidden for Shoprite until funds confirmed */}
+      {canShowReceiptUpload && (
         <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
             <Camera className="h-4 w-4" />
@@ -486,22 +536,57 @@ const DriverOrderDetails = () => {
         </div>
       )}
 
+      {/* Load Safety Checkbox - Before starting delivery */}
+      {canStartDelivery && receiptImage && (
+        <div className="mx-4 mb-4">
+          <LoadSafetyCheckbox
+            vehicleType={driverProfile?.vehicle_type || null}
+            isChecked={loadSafetyConfirmed}
+            onChange={setLoadSafetyConfirmed}
+          />
+        </div>
+      )}
+
       {/* Action Button */}
       {nextStatus && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4">
-          {canStartDelivery && !receiptImage ? (
+          {/* Show warning if Shoprite and funds not confirmed during shopping */}
+          {isShoprite && order.status === 'shopping' && !fundsConfirmed && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-700">
+                Request funds before proceeding to checkout
+              </p>
+            </div>
+          )}
+
+          {canStartDelivery && !receiptImage && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
               <p className="text-sm text-amber-700">
                 Upload receipt photo to unlock "Start Delivery"
               </p>
             </div>
-          ) : null}
+          )}
+
+          {canStartDelivery && receiptImage && !loadSafetyConfirmed && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-700">
+                Confirm load safety to start delivery
+              </p>
+            </div>
+          )}
           
           <Button
             className="w-full h-14 text-lg"
             onClick={() => handleStatusUpdate(nextStatus)}
-            disabled={isUpdating || (canStartDelivery && !receiptImage)}
+            disabled={
+              isUpdating || 
+              (canStartDelivery && !receiptImage) || 
+              (canStartDelivery && !loadSafetyConfirmed) ||
+              (isShoprite && order.status === 'shopping' && !fundsConfirmed && nextStatus === 'shopping_completed')
+            }
           >
             {isUpdating ? (
               <>
@@ -521,6 +606,20 @@ const DriverOrderDetails = () => {
           <p className="text-white font-semibold">Order Completed!</p>
           <p className="text-white/80 text-sm">K{order.driver_payout?.toFixed(2)} added to your wallet</p>
         </div>
+      )}
+
+      {/* Till Funding Dialog */}
+      {order && (
+        <TillFundingDialog
+          isOpen={showTillFunding}
+          onClose={() => setShowTillFunding(false)}
+          order={order}
+          onFundsConfirmed={() => {
+            setShowTillFunding(false);
+            // Refresh order to get updated funds_confirmed state
+            setOrder({ ...order, funds_confirmed: true });
+          }}
+        />
       )}
     </div>
   );

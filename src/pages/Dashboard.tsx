@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, ShoppingCart, User, Settings, LogOut, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, MapPin, ShoppingCart, User, LogOut, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Supermarket, Category } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { StoreDropdown, groupSupermarketsByBrand } from '@/components/StoreDropdown';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -187,7 +187,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Supermarkets */}
+      {/* Supermarkets - Grouped by Brand */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Nearby Stores</h2>
@@ -198,42 +198,10 @@ const Dashboard = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-3">
-            {supermarkets.map((supermarket) => (
-              <button
-                key={supermarket.id}
-                onClick={() => navigate(`/store/${supermarket.id}`)}
-                className="w-full flex items-center gap-4 p-3 bg-card rounded-2xl shadow-soft border border-border/50 hover:shadow-card transition-shadow"
-              >
-                <div className="h-16 w-16 rounded-xl overflow-hidden bg-muted flex-shrink-0">
-                  {supermarket.image_url ? (
-                    <img
-                      src={supermarket.image_url}
-                      alt={supermarket.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-2xl">
-                      🏪
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold">
-                    {supermarket.name}
-                    {supermarket.branch && ` - ${supermarket.branch}`}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{supermarket.address}</p>
-                  {supermarket.distance !== undefined && (
-                    <p className="text-xs text-primary font-medium mt-1">
-                      {supermarket.distance.toFixed(1)} km away
-                    </p>
-                  )}
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </button>
-            ))}
-          </div>
+          <StoreDropdown 
+            groups={groupSupermarketsByBrand(supermarkets)}
+            onStoreSelect={(store) => navigate(`/store/${store.id}`)}
+          />
         )}
       </div>
 

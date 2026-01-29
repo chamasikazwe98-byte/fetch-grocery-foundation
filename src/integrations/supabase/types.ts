@@ -240,6 +240,8 @@ export type Database = {
       orders: {
         Row: {
           cancellation_reason: string | null
+          carrier_bags_count: number | null
+          carrier_bags_total: number | null
           created_at: string
           customer_id: string
           delivery_address: string
@@ -248,6 +250,7 @@ export type Database = {
           delivery_zone_id: string | null
           driver_id: string | null
           driver_payout: number | null
+          funds_confirmed: boolean | null
           id: string
           notes: string | null
           receipt_image_url: string | null
@@ -256,12 +259,15 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
           supermarket_id: string
+          till_amount: number | null
           total: number
           updated_at: string
           zone_fee: number
         }
         Insert: {
           cancellation_reason?: string | null
+          carrier_bags_count?: number | null
+          carrier_bags_total?: number | null
           created_at?: string
           customer_id: string
           delivery_address: string
@@ -270,6 +276,7 @@ export type Database = {
           delivery_zone_id?: string | null
           driver_id?: string | null
           driver_payout?: number | null
+          funds_confirmed?: boolean | null
           id?: string
           notes?: string | null
           receipt_image_url?: string | null
@@ -278,12 +285,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
           supermarket_id: string
+          till_amount?: number | null
           total: number
           updated_at?: string
           zone_fee: number
         }
         Update: {
           cancellation_reason?: string | null
+          carrier_bags_count?: number | null
+          carrier_bags_total?: number | null
           created_at?: string
           customer_id?: string
           delivery_address?: string
@@ -292,6 +302,7 @@ export type Database = {
           delivery_zone_id?: string | null
           driver_id?: string | null
           driver_payout?: number | null
+          funds_confirmed?: boolean | null
           id?: string
           notes?: string | null
           receipt_image_url?: string | null
@@ -300,6 +311,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           supermarket_id?: string
+          till_amount?: number | null
           total?: number
           updated_at?: string
           zone_fee?: number
@@ -560,6 +572,20 @@ export type Database = {
         | {
             Args: {
               p_delivery_address: string
+              p_delivery_zone_id: string
+              p_items: Json
+              p_notes: string
+              p_supermarket_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_carrier_bags_count?: number
+              p_delivery_address: string
+              p_delivery_distance_km?: number
+              p_delivery_latitude?: number
+              p_delivery_longitude?: number
               p_delivery_zone_id: string
               p_items: Json
               p_notes: string
