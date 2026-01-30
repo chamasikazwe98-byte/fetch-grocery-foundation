@@ -361,6 +361,29 @@ const DriverOrderDetails = () => {
         </div>
       </div>
 
+      {/* Estimated Package Size - Vehicle Compatibility */}
+      <div className="mx-4 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📦</span>
+            <span className="text-sm font-medium text-blue-700">Est. Package Size</span>
+          </div>
+          <Badge className={`${
+            orderItems.length <= 5 ? 'bg-green-500' : 
+            orderItems.length <= 15 ? 'bg-yellow-500' : 
+            'bg-red-500'
+          } text-white border-0`}>
+            {orderItems.length <= 5 ? 'Small' : orderItems.length <= 15 ? 'Medium' : 'Large'}
+            {orderItems.length > 15 && ' 🚗'}
+          </Badge>
+        </div>
+        {orderItems.length > 15 && (
+          <p className="text-xs text-blue-600 mt-1">
+            ⚠️ Large order - Car recommended
+          </p>
+        )}
+      </div>
+
       {/* Shoprite Till Request - Only when funds not yet confirmed */}
       {isShoprite && order.status === 'shopping' && !fundsConfirmed && (
         <div className="mx-4 mb-4">

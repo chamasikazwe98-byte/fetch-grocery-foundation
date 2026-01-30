@@ -363,6 +363,14 @@ const Cart = () => {
               <span>K{carrierBagsTotal.toFixed(2)}</span>
             </div>
           )}
+          {/* Estimated Package Size for Drivers */}
+          <div className="flex justify-between items-center bg-muted/50 rounded-lg px-2 py-1 -mx-2">
+            <span className="text-muted-foreground">Est. Package Size</span>
+            <span className="font-medium text-primary">
+              {items.length <= 5 ? 'Small' : items.length <= 15 ? 'Medium' : 'Large'}
+              {items.length > 15 && ' 🚗'}
+            </span>
+          </div>
           <div className="flex justify-between font-bold text-lg pt-2 border-t">
             <span>Total</span>
             <span className="text-primary">K{orderTotal.toFixed(2)}</span>
