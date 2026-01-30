@@ -6,15 +6,20 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Supermarket, Category } from '@/lib/types';
-import { StoreDropdown, groupSupermarketsByBrand } from '@/components/StoreDropdown';
+import { Supermarket } from '@/lib/types';
+import { StoreGridSection } from '@/components/home/StoreGridSection';
+
+// Store categories mapping
+const SUPERMARKETS = ['Shoprite', 'Pick n Pay'];
+const FAST_FOOD = ['Hungry Lion', 'KFC', 'Nandos', 'Pedros'];
+const WINE_LIQUOR = ['The Wine Shop', 'The Bottle Shop', 'Elohim Liquor Store'];
+const HARDWARE = ['MicMar Hardware', 'Builders Warehouse'];
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, hasRole, signOut } = useAuth();
+  const { profile, hasRole, signOut } = useAuth();
   const { itemCount } = useCart();
   const [supermarkets, setSupermarkets] = useState<Supermarket[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,18 +48,18 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      
-      const [supermarketsRes, categoriesRes] = await Promise.all([
-        supabase.from('supermarkets').select('*').eq('is_active', true),
-        supabase.from('categories').select('*'),
-      ]);
 
-      if (supermarketsRes.data) {
-        let sortedSupermarkets = supermarketsRes.data as Supermarket[];
-        
+      const { data: supermarketsData } = await supabase
+        .from('supermarkets')
+        .select('*')
+        .eq('is_active', true);
+
+      if (supermarketsData) {
+        let sortedSupermarkets = supermarketsData as Supermarket[];
+
         // Calculate distance and sort by proximity
         if (userLocation) {
-          sortedSupermarkets = sortedSupermarkets.map(s => ({
+          sortedSupermarkets = sortedSupermarkets.map((s) => ({
             ...s,
             distance: calculateDistance(
               userLocation.lat,
@@ -64,12 +69,8 @@ const Dashboard = () => {
             ),
           })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
         }
-        
-        setSupermarkets(sortedSupermarkets);
-      }
 
-      if (categoriesRes.data) {
-        setCategories(categoriesRes.data);
+        setSupermarkets(sortedSupermarkets);
       }
 
       setIsLoading(false);
@@ -104,6 +105,16 @@ const Dashboard = () => {
       navigate('/driver', { replace: true });
     }
   }, [hasRole, navigate]);
+
+  // Filter stores by category
+  const groceryStores = supermarkets.filter((s) => SUPERMARKETS.includes(s.name));
+  const fastFoodStores = supermarkets.filter((s) => FAST_FOOD.includes(s.name));
+  const liquorStores = supermarkets.filter((s) => WINE_LIQUOR.includes(s.name));
+  const hardwareStores = supermarkets.filter((s) => HARDWARE.includes(s.name));
+
+  const handleStoreSelect = (store: Supermarket) => {
+    navigate(`/store/${store.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -148,7 +159,7 @@ const Dashboard = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search for groceries..."
+            placeholder="Search for groceries, food, hardware..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-white border-0 shadow-card"
@@ -166,44 +177,49 @@ const Dashboard = () => {
         <p className="text-muted-foreground text-sm">What would you like to order today?</p>
       </div>
 
-      {/* Categories */}
-      <div className="px-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Categories</h2>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => navigate(`/search?category=${category.id}`)}
-              className="flex flex-col items-center gap-2 min-w-[72px]"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-2xl">
-                {category.icon}
-              </div>
-              <span className="text-xs font-medium text-center">{category.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Supermarkets - Grouped by Brand */}
-      <div className="px-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Nearby Stores</h2>
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <StoreDropdown 
-            groups={groupSupermarketsByBrand(supermarkets)}
-            onStoreSelect={(store) => navigate(`/store/${store.id}`)}
+      ) : (
+        <>
+          {/* Supermarkets Section */}
+          <StoreGridSection
+            title="Supermarkets"
+            icon="🛒"
+            stores={groceryStores}
+            onStoreSelect={handleStoreSelect}
+            gradient="bg-gradient-to-r from-green-50 to-emerald-50"
           />
-        )}
-      </div>
+
+          {/* Fast Food Section */}
+          <StoreGridSection
+            title="Fast Food"
+            icon="🍗"
+            stores={fastFoodStores}
+            onStoreSelect={handleStoreSelect}
+            gradient="bg-gradient-to-r from-orange-50 to-red-50"
+          />
+
+          {/* Wine & Liquor Section */}
+          <StoreGridSection
+            title="Wine & Liquor"
+            icon="🍷"
+            stores={liquorStores}
+            onStoreSelect={handleStoreSelect}
+            gradient="bg-gradient-to-r from-purple-50 to-pink-50"
+          />
+
+          {/* Hardware Section */}
+          <StoreGridSection
+            title="Hardware Stores"
+            icon="🔧"
+            stores={hardwareStores}
+            onStoreSelect={handleStoreSelect}
+            gradient="bg-gradient-to-r from-slate-50 to-gray-100"
+          />
+        </>
+      )}
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-2 safe-area-inset-bottom">
