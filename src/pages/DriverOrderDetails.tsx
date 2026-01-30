@@ -307,15 +307,22 @@ const DriverOrderDetails = () => {
   const isShoprite = order?.supermarket?.name?.toLowerCase().includes('shoprite');
   const fundsConfirmed = order?.funds_confirmed || false;
 
-  // For Shoprite, hide receipt upload until funds are confirmed
+  // Shoprite: Show "Request Funds" after items picked (shopping_completed), then upload receipt
+  // Others: Just upload receipt after shopping, then confirm tally
   const canShowReceiptUpload = isShoprite 
-    ? fundsConfirmed && (order?.status === 'shopping' || order?.status === 'shopping_completed')
+    ? fundsConfirmed && (order?.status === 'shopping_completed')
     : (order?.status === 'shopping' || order?.status === 'shopping_completed');
 
-  // For Shoprite, hide "Done Shopping" button until funds are confirmed
+  // Shoprite requires funds before moving to in_transit
+  // Other stores just need receipt
   const canAdvanceFromShopping = isShoprite
     ? fundsConfirmed
     : true;
+
+  // For Shoprite, show "Request Funds" button when shopping_completed but not yet funded
+  const showShopriteFundingButton = isShoprite && 
+    order?.status === 'shopping_completed' && 
+    !fundsConfirmed;
 
   if (isLoading || !order) {
     return (
@@ -384,15 +391,21 @@ const DriverOrderDetails = () => {
         )}
       </div>
 
-      {/* Shoprite Till Request - Only when funds not yet confirmed */}
-      {isShoprite && order.status === 'shopping' && !fundsConfirmed && (
-        <div className="mx-4 mb-4">
+      {/* Shoprite Till Request - Show after done shopping but before delivery */}
+      {showShopriteFundingButton && (
+        <div className="mx-4 mb-4 bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">💰</span>
+            <h3 className="font-bold text-orange-800">Request Till Funds</h3>
+          </div>
+          <p className="text-sm text-orange-700 mb-3">
+            Items loaded. Request funds to pay at the till.
+          </p>
           <Button 
-            variant="outline" 
-            className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white"
             onClick={() => setShowTillFunding(true)}
           >
-            💰 Request Funds for Till
+            Request Funds for Till
           </Button>
         </div>
       )}
@@ -573,12 +586,12 @@ const DriverOrderDetails = () => {
       {/* Action Button */}
       {nextStatus && (
         <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4">
-          {/* Show warning if Shoprite and funds not confirmed during shopping */}
-          {isShoprite && order.status === 'shopping' && !fundsConfirmed && (
+          {/* Show warning if Shoprite and funds not confirmed when trying to start delivery */}
+          {isShoprite && order.status === 'shopping_completed' && !fundsConfirmed && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
               <p className="text-sm text-amber-700">
-                Request funds before proceeding to checkout
+                Request till funds before starting delivery
               </p>
             </div>
           )}
@@ -608,7 +621,8 @@ const DriverOrderDetails = () => {
               isUpdating || 
               (canStartDelivery && !receiptImage) || 
               (canStartDelivery && !loadSafetyConfirmed) ||
-              (isShoprite && order.status === 'shopping' && !fundsConfirmed && nextStatus === 'shopping_completed')
+              // Block starting delivery for Shoprite until funds received
+              (isShoprite && order.status === 'shopping_completed' && !fundsConfirmed && nextStatus === 'in_transit')
             }
           >
             {isUpdating ? (
