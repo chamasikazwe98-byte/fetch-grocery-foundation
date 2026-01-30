@@ -92,6 +92,7 @@ export interface Order {
   carrier_bags_total: number;
   till_amount: number | null;
   funds_confirmed: boolean;
+  estimated_package_size: string;
   supermarket?: Supermarket;
   items?: OrderItem[];
   customer?: Profile;

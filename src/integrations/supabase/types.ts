@@ -250,6 +250,7 @@ export type Database = {
           delivery_zone_id: string | null
           driver_id: string | null
           driver_payout: number | null
+          estimated_package_size: string | null
           funds_confirmed: boolean | null
           id: string
           notes: string | null
@@ -276,6 +277,7 @@ export type Database = {
           delivery_zone_id?: string | null
           driver_id?: string | null
           driver_payout?: number | null
+          estimated_package_size?: string | null
           funds_confirmed?: boolean | null
           id?: string
           notes?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           delivery_zone_id?: string | null
           driver_id?: string | null
           driver_payout?: number | null
+          estimated_package_size?: string | null
           funds_confirmed?: boolean | null
           id?: string
           notes?: string | null
