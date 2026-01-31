@@ -93,6 +93,8 @@ export interface Order {
   till_amount: number | null;
   funds_confirmed: boolean;
   estimated_package_size: string;
+  personal_shopper_fee: number;
+  is_physical_store: boolean;
   supermarket?: Supermarket;
   items?: OrderItem[];
   customer?: Profile;

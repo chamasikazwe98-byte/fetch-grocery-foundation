@@ -1,18 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ShoppingCart, Plus, Minus, MapPin } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { Product, Category, Supermarket } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { DepartmentGrid } from '@/components/store/DepartmentGrid';
+import { StoreSearch } from '@/components/store/StoreSearch';
+import { ProductGrid } from '@/components/store/ProductGrid';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+// Determine store type from name
+const getStoreType = (storeName: string): 'supermarket' | 'hardware' | 'liquor' | 'fast-food' => {
+  const name = storeName.toLowerCase();
+  if (name.includes('kfc') || name.includes('nandos') || name.includes('pedro') || name.includes('pizza')) {
+    return 'fast-food';
+  }
+  if (name.includes('wine') || name.includes('liquor') || name.includes('bottle') || name.includes('elohim')) {
+    return 'liquor';
+  }
+  if (name.includes('micmar') || name.includes('builders') || name.includes('hardware')) {
+    return 'hardware';
+  }
+  return 'supermarket';
+};
 
 const Store = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { items, addItem, removeItem, getItemQuantity, itemCount } = useCart();
+  const { itemCount } = useCart();
   
   const [supermarket, setSupermarket] = useState<Supermarket | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +36,7 @@ const Store = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isDepartmentsOpen, setIsDepartmentsOpen] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,9 +83,19 @@ const Store = () => {
   const filteredProducts = products.filter((product) => {
     const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
     const matchesSearch = !searchQuery || 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Auto-collapse departments when searching
+  useEffect(() => {
+    if (searchQuery) {
+      setIsDepartmentsOpen(false);
+    }
+  }, [searchQuery]);
+
+  const storeType = supermarket ? getStoreType(supermarket.name) : 'supermarket';
 
   if (isLoading) {
     return (
@@ -81,8 +108,8 @@ const Store = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="gradient-primary px-4 pt-4 pb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="gradient-primary px-4 pt-4 pb-5">
+        <div className="flex items-center justify-between mb-3">
           <button onClick={() => navigate(-1)} className="text-white">
             <ArrowLeft className="h-6 w-6" />
           </button>
@@ -106,113 +133,66 @@ const Store = () => {
             {supermarket.branch}
           </p>
         )}
-
-        {/* Search */}
-        <div className="relative mt-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white"
-          />
-        </div>
       </div>
 
-      {/* Category Chips */}
-      <div className="px-4 py-3 overflow-x-auto">
-        <div className="flex gap-2 min-w-max">
-          <Badge
-            variant={selectedCategory === null ? 'default' : 'outline'}
-            className="cursor-pointer px-4 py-2"
+      {/* Sticky Search Bar */}
+      <StoreSearch
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={`Search in ${supermarket?.name || 'store'}...`}
+      />
+
+      {/* Collapsible Department Grid */}
+      <Collapsible open={isDepartmentsOpen} onOpenChange={setIsDepartmentsOpen}>
+        <CollapsibleTrigger asChild>
+          <div className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+            <h2 className="font-semibold text-foreground">
+              {storeType === 'supermarket' ? 'Shop by Department' : 
+               storeType === 'hardware' ? 'Shop by Category' :
+               storeType === 'liquor' ? 'Browse Selection' :
+               'Menu Categories'}
+            </h2>
+            {isDepartmentsOpen ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-4">
+            <DepartmentGrid
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategorySelect={setSelectedCategory}
+              storeType={storeType}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Selected Category Header */}
+      {selectedCategory && (
+        <div className="px-4 py-2 bg-primary/5 border-y border-border flex items-center justify-between">
+          <span className="text-sm font-medium text-primary">
+            {categories.find(c => c.id === selectedCategory)?.icon}{' '}
+            {categories.find(c => c.id === selectedCategory)?.name}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs h-7"
             onClick={() => setSelectedCategory(null)}
           >
-            All
-          </Badge>
-          {categories.map((category) => (
-            <Badge
-              key={category.id}
-              variant={selectedCategory === category.id ? 'default' : 'outline'}
-              className="cursor-pointer px-4 py-2 whitespace-nowrap"
-              onClick={() => setSelectedCategory(category.id)}
-            >
-              {category.icon} {category.name}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* Products Grid */}
-      <div className="px-4 grid grid-cols-2 gap-3">
-        {filteredProducts.map((product) => {
-          const quantity = getItemQuantity(product.id);
-          
-          return (
-            <div
-              key={product.id}
-              className="bg-card rounded-xl border border-border overflow-hidden"
-            >
-              <div className="aspect-square bg-muted relative">
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl">
-                    🛒
-                  </div>
-                )}
-              </div>
-              <div className="p-3">
-                <h3 className="font-medium text-sm line-clamp-2 min-h-[2.5rem]">
-                  {product.name}
-                </h3>
-                <p className="text-primary font-bold mt-1">
-                  K{product.price.toFixed(2)}
-                </p>
-                
-                {quantity === 0 ? (
-                  <Button
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => addItem(product)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                ) : (
-                  <div className="flex items-center justify-between mt-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8"
-                      onClick={() => removeItem(product.id)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="font-semibold">{quantity}</span>
-                    <Button
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => addItem(product)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          No products found
+            Clear
+          </Button>
         </div>
       )}
+
+      {/* Products Grid */}
+      <div className="px-4 py-4">
+        <ProductGrid products={filteredProducts} />
+      </div>
 
       {/* Floating Cart Button */}
       {itemCount > 0 && (
