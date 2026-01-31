@@ -350,10 +350,12 @@ export type Database = {
           id: string
           image_url: string | null
           in_stock: boolean | null
+          is_heavy: boolean | null
           name: string
           price: number
           supermarket_id: string
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
           category_id?: string | null
@@ -362,10 +364,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
+          is_heavy?: boolean | null
           name: string
           price: number
           supermarket_id: string
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
           category_id?: string | null
@@ -374,10 +378,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
+          is_heavy?: boolean | null
           name?: string
           price?: number
           supermarket_id?: string
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: [
           {
