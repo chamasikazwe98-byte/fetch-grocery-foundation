@@ -27,23 +27,23 @@ const Splash = () => {
   }, [navigate, user, roles, isLoading]);
 
   return (
-    <div className="min-h-screen gradient-splash flex flex-col items-center justify-center">
-      <div className="animate-scale-in flex flex-col items-center gap-6">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
+      <div className="animate-scale-in flex flex-col items-center gap-8">
         <img 
           src={fetchLogo} 
           alt="Fetch!" 
-          className="h-24 w-auto object-contain drop-shadow-2xl"
+          className="h-40 w-auto object-contain drop-shadow-xl"
         />
-        <p className="text-white/90 text-lg font-medium">Groceries delivered fast</p>
+        <p className="text-foreground/70 text-xl font-medium">Groceries delivered fast</p>
       </div>
       
-      <div className="absolute bottom-12 flex flex-col items-center gap-2">
-        <div className="flex gap-1">
-          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0ms' }} />
-          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '200ms' }} />
-          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '400ms' }} />
+      <div className="absolute bottom-16 flex flex-col items-center gap-3">
+        <div className="flex gap-1.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0ms' }} />
+          <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '200ms' }} />
+          <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: '400ms' }} />
         </div>
-        <p className="text-white/60 text-sm">Loading...</p>
+        <p className="text-muted-foreground text-sm">Loading...</p>
       </div>
     </div>
   );

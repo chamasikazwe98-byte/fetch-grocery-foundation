@@ -253,7 +253,9 @@ export type Database = {
           estimated_package_size: string | null
           funds_confirmed: boolean | null
           id: string
+          is_physical_store: boolean | null
           notes: string | null
+          personal_shopper_fee: number | null
           receipt_image_url: string | null
           requires_car_driver: boolean | null
           service_fee: number
@@ -280,7 +282,9 @@ export type Database = {
           estimated_package_size?: string | null
           funds_confirmed?: boolean | null
           id?: string
+          is_physical_store?: boolean | null
           notes?: string | null
+          personal_shopper_fee?: number | null
           receipt_image_url?: string | null
           requires_car_driver?: boolean | null
           service_fee: number
@@ -307,7 +311,9 @@ export type Database = {
           estimated_package_size?: string | null
           funds_confirmed?: boolean | null
           id?: string
+          is_physical_store?: boolean | null
           notes?: string | null
+          personal_shopper_fee?: number | null
           receipt_image_url?: string | null
           requires_car_driver?: boolean | null
           service_fee?: number

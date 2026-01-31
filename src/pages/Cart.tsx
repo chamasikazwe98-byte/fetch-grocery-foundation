@@ -17,6 +17,7 @@ import { CarrierBagSelector, BAG_UNIT_PRICE } from '@/components/CarrierBagSelec
 // K10 per kilometer, minimum K30
 const RATE_PER_KM = 10;
 const MIN_DELIVERY_FEE = 30;
+const PERSONAL_SHOPPER_FEE = 30; // K30 driver shopping incentive
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -76,7 +77,8 @@ const Cart = () => {
   // Calculate carrier bags total
   const carrierBagsTotal = carrierBagsCount * BAG_UNIT_PRICE;
 
-  const orderTotal = subtotal + serviceFee + deliveryFee + carrierBagsTotal;
+  // Order total includes K30 personal shopper fee for physical stores
+  const orderTotal = subtotal + serviceFee + deliveryFee + carrierBagsTotal + PERSONAL_SHOPPER_FEE;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -363,6 +365,13 @@ const Cart = () => {
               <span>K{carrierBagsTotal.toFixed(2)}</span>
             </div>
           )}
+          {/* Driver Shopping Incentive - K30 flat fee */}
+          <div className="flex justify-between items-center bg-emerald-50 rounded-lg px-2 py-1.5 -mx-2">
+            <span className="text-emerald-700 text-xs font-medium flex items-center gap-1">
+              🛒 Driver Shopping Incentive
+            </span>
+            <span className="font-medium text-emerald-700">K{PERSONAL_SHOPPER_FEE.toFixed(2)}</span>
+          </div>
           {/* Estimated Package Size for Drivers */}
           <div className="flex justify-between items-center bg-muted/50 rounded-lg px-2 py-1 -mx-2">
             <span className="text-muted-foreground">Est. Package Size</span>
