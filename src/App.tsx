@@ -15,6 +15,7 @@ import Orders from "./pages/Orders";
 import OrderDetails from "./pages/OrderDetails";
 import DriverDashboard from "./pages/DriverDashboard";
 import DriverOrderDetails from "./pages/DriverOrderDetails";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,29 @@ const DriverRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!roles.includes('driver') && !roles.includes('admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Admin-only route wrapper
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, roles, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!roles.includes('admin')) {
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -158,6 +182,14 @@ const AppRoutes = () => {
           <DriverRoute>
             <DriverOrderDetails />
           </DriverRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
         }
       />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
