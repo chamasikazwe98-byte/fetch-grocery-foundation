@@ -169,16 +169,36 @@ const DriverDashboard = () => {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Earnings Stats */}
       <div className="px-4 -mt-3 mb-4">
-        <div className="bg-card rounded-xl border border-border p-4 grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">K{profile?.wallet_balance?.toFixed(2) || '0.00'}</p>
-            <p className="text-sm text-muted-foreground">Wallet Balance</p>
+        <div className="bg-card rounded-xl border border-border p-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">K{profile?.wallet_balance?.toFixed(2) || '0.00'}</p>
+              <p className="text-sm text-muted-foreground">Wallet Balance</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{myOrders.length}</p>
+              <p className="text-sm text-muted-foreground">Active Orders</p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{myOrders.length}</p>
-            <p className="text-sm text-muted-foreground">Active Orders</p>
+          
+          {/* Earnings Breakdown */}
+          <div className="border-t border-border pt-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Earnings Breakdown</p>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Base Delivery Fees (80%)</span>
+              <span className="font-medium">Varies per order</span>
+            </div>
+            <div className="flex justify-between items-center text-sm bg-emerald-50 rounded-lg px-2 py-1.5 -mx-2">
+              <span className="text-emerald-700 flex items-center gap-1.5">
+                🛒 Shopper Bonus (100%)
+              </span>
+              <span className="font-semibold text-emerald-700">+K30.00/order</span>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Shopper bonus is credited after successful delivery
+            </p>
           </div>
         </div>
       </div>

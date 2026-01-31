@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, MapPin, ChevronDown, ChevronUp, Clock, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
@@ -105,6 +105,9 @@ const Store = () => {
     );
   }
 
+  // Hardcoded contact number
+  const STORE_CONTACT = '+260 977 123 456';
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -133,6 +136,21 @@ const Store = () => {
             {supermarket.branch}
           </p>
         )}
+        
+        {/* Store Info: Closing Time & Contact */}
+        <div className="flex items-center gap-4 mt-3">
+          <div className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-white text-xs font-medium">
+            <Clock className="h-3.5 w-3.5" />
+            <span>Closes at 20:00</span>
+          </div>
+          <a 
+            href={`tel:${STORE_CONTACT}`} 
+            className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-white text-xs font-medium hover:bg-white/30 transition-colors"
+          >
+            <Phone className="h-3.5 w-3.5" />
+            <span>Contact Store</span>
+          </a>
+        </div>
       </div>
 
       {/* Sticky Search Bar */}
