@@ -17,6 +17,7 @@ interface StoreGridSectionProps {
   stores: Supermarket[];
   onStoreSelect: (store: Supermarket) => void;
   gradient: string;
+  showNoMarkupBadge?: boolean;
 }
 
 // Brand-specific images
@@ -57,6 +58,7 @@ export const StoreGridSection = ({
   stores,
   onStoreSelect,
   gradient,
+  showNoMarkupBadge = false,
 }: StoreGridSectionProps) => {
   const [selectedBrand, setSelectedBrand] = useState<{ name: string; stores: Supermarket[] } | null>(null);
   const groupedStores = groupByBrand(stores);
@@ -67,14 +69,21 @@ export const StoreGridSection = ({
     <section className="mb-6">
       {/* Section Header */}
       <div className={`${gradient} rounded-xl mx-4 p-4 mb-3`}>
-        <div className="flex items-center gap-2">
-          <span className="text-3xl">{icon}</span>
-          <div>
-            <h2 className="text-lg font-bold text-foreground">{title}</h2>
-            <p className="text-xs text-muted-foreground">
-              {Array.from(groupedStores.keys()).length} brands • {stores.length} locations
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">{icon}</span>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">{title}</h2>
+              <p className="text-xs text-muted-foreground">
+                {Array.from(groupedStores.keys()).length} brands • {stores.length} locations
+              </p>
+            </div>
           </div>
+          {showNoMarkupBadge && (
+            <Badge className="bg-emerald-500 text-white border-0 text-[10px] px-2 py-1">
+              ✓ In-Store Prices
+            </Badge>
+          )}
         </div>
       </div>
 
