@@ -190,6 +190,7 @@ const Dashboard = () => {
             stores={groceryStores}
             onStoreSelect={handleStoreSelect}
             gradient="bg-gradient-to-r from-green-50 to-emerald-50"
+            showNoMarkupBadge
           />
 
           {/* Fast Food Section */}
