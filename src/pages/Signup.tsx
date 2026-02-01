@@ -69,11 +69,13 @@ const Signup = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="bg-foreground py-10 px-6 flex flex-col items-center">
-        <img 
-          src={fetchLogo} 
-          alt="Fetch!" 
-          className="h-14 w-auto object-contain mb-3"
-        />
+        <div className="bg-white rounded-2xl p-4 mb-3">
+          <img 
+            src={fetchLogo} 
+            alt="Fetch!" 
+            className="h-20 w-auto object-contain"
+          />
+        </div>
         <h1 className="text-2xl font-bold text-white">Create account</h1>
         <p className="text-white/80 mt-1">Join Fetch today</p>
       </div>

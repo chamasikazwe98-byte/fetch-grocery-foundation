@@ -137,11 +137,11 @@ const Store = () => {
           </p>
         )}
         
-        {/* Store Info: Closing Time & Contact */}
+        {/* Store Info: Hours & Contact */}
         <div className="flex items-center gap-4 mt-3">
           <div className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-white text-xs font-medium">
             <Clock className="h-3.5 w-3.5" />
-            <span>Closes at 20:00</span>
+            <span>07:00 - 20:00</span>
           </div>
           <a 
             href={`tel:${STORE_CONTACT}`} 
@@ -160,34 +160,42 @@ const Store = () => {
         placeholder={`Search in ${supermarket?.name || 'store'}...`}
       />
 
-      {/* Collapsible Department Grid */}
-      <Collapsible open={isDepartmentsOpen} onOpenChange={setIsDepartmentsOpen}>
-        <CollapsibleTrigger asChild>
-          <div className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-            <h2 className="font-semibold text-foreground">
-              {storeType === 'supermarket' ? 'Shop by Department' : 
-               storeType === 'hardware' ? 'Shop by Category' :
-               storeType === 'liquor' ? 'Browse Selection' :
-               'Menu Categories'}
-            </h2>
-            {isDepartmentsOpen ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-4">
-            <DepartmentGrid
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onCategorySelect={setSelectedCategory}
-              storeType={storeType}
-            />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Collapsible Department Grid - Hidden for restaurants */}
+      {storeType !== 'fast-food' && (
+        <Collapsible open={isDepartmentsOpen} onOpenChange={setIsDepartmentsOpen}>
+          <CollapsibleTrigger asChild>
+            <div className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+              <h2 className="font-semibold text-foreground">
+                {storeType === 'supermarket' ? 'Shop by Department' : 
+                 storeType === 'hardware' ? 'Shop by Category' :
+                 'Browse Selection'}
+              </h2>
+              {isDepartmentsOpen ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4">
+              <DepartmentGrid
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onCategorySelect={setSelectedCategory}
+                storeType={storeType}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Restaurant Menu Header */}
+      {storeType === 'fast-food' && (
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="font-semibold text-foreground">🍽️ Full Menu</h2>
+        </div>
+      )}
 
       {/* Selected Category Header */}
       {selectedCategory && (
