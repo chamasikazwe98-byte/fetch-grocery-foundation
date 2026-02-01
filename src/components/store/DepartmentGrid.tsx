@@ -43,10 +43,8 @@ const LIQUOR_DEPARTMENTS = [
   'Beverages',
 ];
 
-const FAST_FOOD_DEPARTMENTS = [
-  'Fast Food',
-  'Pizza',
-];
+// For restaurants, we DON'T show department grid - show menu directly
+const FAST_FOOD_DEPARTMENTS: string[] = [];
 
 export const DepartmentGrid = ({
   categories,
