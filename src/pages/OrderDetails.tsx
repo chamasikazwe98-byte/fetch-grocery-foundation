@@ -6,6 +6,8 @@ import { Order, OrderItem, OrderStatus, Profile } from '@/lib/types';
 import { format } from 'date-fns';
 import { DriverTrackingMap } from '@/components/DriverTrackingMap';
 import { OrderCompletionModal } from '@/components/OrderCompletionModal';
+import { OrderChat } from '@/components/chat/OrderChat';
+import { ItemIssueResponse } from '@/components/customer/ItemIssueResponse';
 import { useToast } from '@/hooks/use-toast';
 
 const statusConfig: Record<OrderStatus, { label: string; description: string; color: string; icon: React.ReactNode; step: number }> = {
@@ -95,6 +97,8 @@ const OrderDetails = () => {
   const [driver, setDriver] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [itemIssues, setItemIssues] = useState<any[]>([]);
   const previousStatusRef = useRef<OrderStatus | null>(null);
 
   useEffect(() => {
@@ -155,7 +159,25 @@ const OrderDetails = () => {
       setIsLoading(false);
     };
 
+    const fetchItemIssues = async () => {
+      if (!id) return;
+      
+      const { data } = await supabase
+        .from('order_item_issues')
+        .select('*, order_item:order_items(*, product:products(name))')
+        .eq('order_id', id)
+        .eq('resolved', false);
+
+      if (data) {
+        setItemIssues(data.map((issue: any) => ({
+          ...issue,
+          product_name: issue.order_item?.product?.name,
+        })));
+      }
+    };
+
     fetchOrder();
+    fetchItemIssues();
 
     // Subscribe to order updates with improved real-time sync (listen for UPDATE events)
     const channel = supabase
@@ -172,6 +194,18 @@ const OrderDetails = () => {
           console.log('Order UPDATE received:', payload);
           // Immediately refetch to get latest status + driver info
           fetchOrder();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_item_issues',
+          filter: `order_id=eq.${id}`,
+        },
+        () => {
+          fetchItemIssues();
         }
       )
       .subscribe((status) => {
@@ -410,6 +444,31 @@ const OrderDetails = () => {
         onClose={handleCloseCompletionModal}
         onViewOrders={handleViewOrders}
       />
+
+      {/* Item Issues (Unavailable Items) */}
+      {itemIssues.length > 0 && (
+        <div className="mx-4 mb-4">
+          {itemIssues.map((issue) => (
+            <ItemIssueResponse
+              key={issue.id}
+              issue={issue}
+              onResolved={() => {
+                setItemIssues((prev) => prev.filter((i) => i.id !== issue.id));
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Order Chat - Only show when driver is assigned and order is active */}
+      {order && driver && !['delivered', 'cancelled', 'awaiting_payment', 'pending'].includes(order.status) && (
+        <OrderChat
+          orderId={order.id}
+          isDriver={false}
+          isOpen={isChatOpen}
+          onToggle={() => setIsChatOpen(!isChatOpen)}
+        />
+      )}
     </div>
   );
 };

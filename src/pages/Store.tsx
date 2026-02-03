@@ -9,6 +9,7 @@ import { DepartmentGrid } from '@/components/store/DepartmentGrid';
 import { StoreSearch } from '@/components/store/StoreSearch';
 import { ProductGrid } from '@/components/store/ProductGrid';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ProductGridSkeleton, DepartmentGridSkeleton } from '@/components/ui/product-skeleton';
 
 // Determine store type from name
 const getStoreType = (storeName: string): 'supermarket' | 'hardware' | 'liquor' | 'fast-food' => {
@@ -99,8 +100,28 @@ const Store = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background pb-24">
+        {/* Loading Header Skeleton */}
+        <div className="gradient-primary px-4 pt-4 pb-5">
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={() => navigate(-1)} className="text-white">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <button onClick={() => navigate('/cart')} className="relative text-white">
+              <ShoppingCart className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="h-6 w-32 bg-white/30 rounded animate-pulse" />
+          <div className="h-4 w-24 bg-white/20 rounded animate-pulse mt-2" />
+        </div>
+        
+        {/* Department Skeleton */}
+        <div className="py-4">
+          <DepartmentGridSkeleton />
+        </div>
+        
+        {/* Product Grid Skeleton */}
+        <ProductGridSkeleton count={6} />
       </div>
     );
   }
