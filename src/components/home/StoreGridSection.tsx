@@ -3,7 +3,7 @@ import { Supermarket } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, MapPin, ChevronRight } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -114,6 +114,11 @@ export const StoreGridSection = ({
                   {brandName}
                 </h3>
               </div>
+              {/* Store Hours Badge */}
+              <Badge className="absolute top-2 left-2 bg-black/60 text-white border-0 text-[9px] flex items-center gap-1">
+                <Clock className="h-2.5 w-2.5" />
+                07:00 - 20:00
+              </Badge>
               {brandStores.length > 1 && (
                 <Badge className="absolute top-2 right-2 bg-black/50 text-white border-0 text-[10px]">
                   {brandStores.length}

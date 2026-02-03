@@ -13,6 +13,7 @@ import { LocationPicker } from '@/components/LocationPicker';
 import { Coordinates, calculateDistance } from '@/lib/geoUtils';
 import { PaymentConfirmationModal } from '@/components/PaymentConfirmationModal';
 import { CarrierBagSelector, BAG_UNIT_PRICE } from '@/components/CarrierBagSelector';
+import { ScheduledDelivery } from '@/components/cart/ScheduledDelivery';
 
 // K10 per kilometer, minimum K30
 const RATE_PER_KM = 10;
@@ -34,6 +35,7 @@ const Cart = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
   const [carrierBagsCount, setCarrierBagsCount] = useState(0);
+  const [scheduledDeliveryTime, setScheduledDeliveryTime] = useState<Date | null>(null);
 
   // Fetch supermarket details for distance calculation
   useEffect(() => {
@@ -333,6 +335,14 @@ const Cart = () => {
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
+      </div>
+
+      {/* Scheduled Delivery Section */}
+      <div className="px-4 pb-4">
+        <ScheduledDelivery
+          onScheduleSelect={setScheduledDeliveryTime}
+          selectedDate={scheduledDeliveryTime}
+        />
       </div>
 
       {/* Carrier Bags Section - Before Order Summary */}

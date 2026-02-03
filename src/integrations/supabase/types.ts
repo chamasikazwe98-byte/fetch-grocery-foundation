@@ -185,6 +185,80 @@ export type Database = {
           },
         ]
       }
+      order_item_issues: {
+        Row: {
+          created_at: string
+          customer_choice: string | null
+          driver_notes: string | null
+          id: string
+          issue_type: string
+          order_id: string
+          order_item_id: string
+          replacement_name: string | null
+          replacement_price: number | null
+          replacement_product_id: string | null
+          resolved: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_choice?: string | null
+          driver_notes?: string | null
+          id?: string
+          issue_type: string
+          order_id: string
+          order_item_id: string
+          replacement_name?: string | null
+          replacement_price?: number | null
+          replacement_product_id?: string | null
+          resolved?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_choice?: string | null
+          driver_notes?: string | null
+          id?: string
+          issue_type?: string
+          order_id?: string
+          order_item_id?: string
+          replacement_name?: string | null
+          replacement_price?: number | null
+          replacement_product_id?: string | null
+          resolved?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_issues_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_issues_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pending_orders_for_drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_issues_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_issues_replacement_product_id_fkey"
+            columns: ["replacement_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -237,6 +311,48 @@ export type Database = {
           },
         ]
       }
+      order_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          order_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          order_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          order_id?: string
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pending_orders_for_drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           cancellation_reason: string | null
@@ -254,10 +370,12 @@ export type Database = {
           funds_confirmed: boolean | null
           id: string
           is_physical_store: boolean | null
+          is_scheduled: boolean | null
           notes: string | null
           personal_shopper_fee: number | null
           receipt_image_url: string | null
           requires_car_driver: boolean | null
+          scheduled_delivery_time: string | null
           service_fee: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
@@ -283,10 +401,12 @@ export type Database = {
           funds_confirmed?: boolean | null
           id?: string
           is_physical_store?: boolean | null
+          is_scheduled?: boolean | null
           notes?: string | null
           personal_shopper_fee?: number | null
           receipt_image_url?: string | null
           requires_car_driver?: boolean | null
+          scheduled_delivery_time?: string | null
           service_fee: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
@@ -312,10 +432,12 @@ export type Database = {
           funds_confirmed?: boolean | null
           id?: string
           is_physical_store?: boolean | null
+          is_scheduled?: boolean | null
           notes?: string | null
           personal_shopper_fee?: number | null
           receipt_image_url?: string | null
           requires_car_driver?: boolean | null
+          scheduled_delivery_time?: string | null
           service_fee?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number

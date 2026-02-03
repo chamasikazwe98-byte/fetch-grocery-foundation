@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Phone, Navigation } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Phone, Navigation, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,8 @@ import { compressImage, getFileSizeInMB } from '@/lib/imageCompression';
 import { useDriverLocationTracker } from '@/hooks/useDriverLocationTracker';
 import { TillFundingDialog } from '@/components/driver/TillFundingDialog';
 import { LoadSafetyCheckbox } from '@/components/driver/LoadSafetyCheckbox';
+import { OrderChat } from '@/components/chat/OrderChat';
+import { ItemUnavailableDialog } from '@/components/driver/ItemUnavailableDialog';
 
 const statusFlow: OrderStatus[] = ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit', 'delivered'];
 
@@ -31,6 +33,9 @@ const DriverOrderDetails = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showTillFunding, setShowTillFunding] = useState(false);
   const [loadSafetyConfirmed, setLoadSafetyConfirmed] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unavailableItem, setUnavailableItem] = useState<OrderItem | null>(null);
+  const [itemIssues, setItemIssues] = useState<Set<string>>(new Set());
 
   // Track driver location when order is accepted and not delivered
   const shouldTrackLocation = order && 
@@ -100,12 +105,48 @@ const DriverOrderDetails = () => {
         if (phoneData?.phone) {
           setCustomerPhone(phoneData.phone);
         }
+        // Fetch existing item issues for this order
+        const { data: issuesData } = await supabase
+          .from('order_item_issues')
+          .select('order_item_id')
+          .eq('order_id', id);
+
+        if (issuesData) {
+          setItemIssues(new Set(issuesData.map((i: any) => i.order_item_id)));
+        }
       }
 
       setIsLoading(false);
     };
 
     fetchOrder();
+
+    // Subscribe to item issues
+    const issueChannel = supabase
+      .channel(`item-issues-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_item_issues',
+          filter: `order_id=eq.${id}`,
+        },
+        async () => {
+          const { data } = await supabase
+            .from('order_item_issues')
+            .select('order_item_id')
+            .eq('order_id', id);
+          if (data) {
+            setItemIssues(new Set(data.map((i: any) => i.order_item_id)));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(issueChannel);
+    };
   }, [id]);
 
   const handleReceiptUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -485,20 +526,39 @@ const DriverOrderDetails = () => {
       <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
         <h3 className="font-semibold mb-3">Shopping List ({orderItems.length} items)</h3>
         <div className="space-y-2">
-          {orderItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 py-2 border-b last:border-0">
-              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-lg">
-                {item.product?.image_url ? (
-                  <img src={item.product.image_url} alt="" className="w-full h-full object-cover rounded" />
-                ) : '🛒'}
+          {orderItems.map((item) => {
+            const hasIssue = itemIssues.has(item.id);
+            const isShopping = order.status === 'shopping' || order.status === 'arrived_at_store';
+            
+            return (
+              <div key={item.id} className={`flex items-center gap-3 py-2 border-b last:border-0 ${hasIssue ? 'opacity-50' : ''}`}>
+                <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-lg">
+                  {item.product?.image_url ? (
+                    <img src={item.product.image_url} alt="" className="w-full h-full object-cover rounded" />
+                  ) : '🛒'}
+                </div>
+                <div className="flex-1">
+                  <p className={`text-sm font-medium ${hasIssue ? 'line-through' : ''}`}>{item.product?.name}</p>
+                  <p className="text-xs text-muted-foreground">K{item.unit_price.toFixed(2)} each</p>
+                  {hasIssue && (
+                    <span className="text-xs text-amber-600 font-medium">⚠️ Marked unavailable</span>
+                  )}
+                </div>
+                {isShopping && !hasIssue ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    onClick={() => setUnavailableItem(item)}
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Badge variant="secondary">{item.quantity}x</Badge>
+                )}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{item.product?.name}</p>
-                <p className="text-xs text-muted-foreground">K{item.unit_price.toFixed(2)} each</p>
-              </div>
-              <Badge variant="secondary">{item.quantity}x</Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="mt-3 pt-3 border-t space-y-1">
           <div className="flex justify-between text-sm">
@@ -656,6 +716,24 @@ const DriverOrderDetails = () => {
             // Refresh order to get updated funds_confirmed state
             setOrder({ ...order, funds_confirmed: true });
           }}
+        />
+      )}
+
+      {/* Item Unavailable Dialog */}
+      <ItemUnavailableDialog
+        isOpen={!!unavailableItem}
+        onClose={() => setUnavailableItem(null)}
+        orderItem={unavailableItem}
+        orderId={order.id}
+      />
+
+      {/* Order Chat */}
+      {order && order.status !== 'delivered' && (
+        <OrderChat
+          orderId={order.id}
+          isDriver={true}
+          isOpen={isChatOpen}
+          onToggle={() => setIsChatOpen(!isChatOpen)}
         />
       )}
     </div>

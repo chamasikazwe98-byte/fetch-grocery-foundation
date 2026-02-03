@@ -8,6 +8,8 @@ import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Supermarket } from '@/lib/types';
 import { StoreGridSection } from '@/components/home/StoreGridSection';
+import { BuyItAgainSection } from '@/components/home/BuyItAgainSection';
+import { StoreGridSkeleton } from '@/components/ui/product-skeleton';
 
 // Store categories mapping
 const SUPERMARKETS = ['Shoprite', 'Pick n Pay'];
@@ -178,11 +180,15 @@ const Dashboard = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6 py-4">
+          <StoreGridSkeleton count={4} />
+          <StoreGridSkeleton count={4} />
         </div>
       ) : (
         <>
+          {/* Buy it Again Section */}
+          <BuyItAgainSection />
+
           {/* Supermarkets Section */}
           <StoreGridSection
             title="Supermarkets"
