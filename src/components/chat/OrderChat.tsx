@@ -52,9 +52,9 @@ export const OrderChat = ({ orderId, isDriver = false, isOpen, onToggle }: Order
 
     fetchMessages();
 
-    // Subscribe to realtime messages
+    // Subscribe to realtime messages with immediate sync
     const channel = supabase
-      .channel(`chat-${orderId}`)
+      .channel(`chat-realtime-${orderId}`)
       .on(
         'postgres_changes',
         {
@@ -64,8 +64,13 @@ export const OrderChat = ({ orderId, isDriver = false, isOpen, onToggle }: Order
           filter: `order_id=eq.${orderId}`,
         },
         (payload) => {
+          console.log('New chat message received:', payload);
           const newMsg = payload.new as Message;
-          setMessages((prev) => [...prev, newMsg]);
+          setMessages((prev) => {
+            // Prevent duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
           
           // Update unread count if chat is closed and message is from other party
           if (!isOpen && newMsg.sender_id !== user?.id) {
@@ -73,7 +78,9 @@ export const OrderChat = ({ orderId, isDriver = false, isOpen, onToggle }: Order
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Chat subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
