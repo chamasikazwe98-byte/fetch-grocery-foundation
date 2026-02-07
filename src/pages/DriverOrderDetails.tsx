@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, AlertCircle, Phone, Navigation, XCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, CheckCircle, Loader2, XCircle, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,8 @@ import { TillFundingDialog } from '@/components/driver/TillFundingDialog';
 import { LoadSafetyCheckbox } from '@/components/driver/LoadSafetyCheckbox';
 import { OrderChat } from '@/components/chat/OrderChat';
 import { ItemUnavailableDialog } from '@/components/driver/ItemUnavailableDialog';
+import { DriverActionBar } from '@/components/driver/DriverActionBar';
+import { CustomerContactCard } from '@/components/driver/CustomerContactCard';
 
 const statusFlow: OrderStatus[] = ['accepted', 'arrived_at_store', 'shopping', 'shopping_completed', 'in_transit', 'delivered'];
 
@@ -44,7 +46,7 @@ const DriverOrderDetails = () => {
   useDriverLocationTracker({
     orderId: id || null,
     isActive: !!shouldTrackLocation,
-    intervalMs: 30000, // Send location every 30 seconds
+    intervalMs: 30000,
   });
 
   useEffect(() => {
@@ -60,21 +62,18 @@ const DriverOrderDetails = () => {
       if (orderData) {
         setOrder(orderData as unknown as Order);
         
-        // If receipt exists, get signed URL for display
         if (orderData.receipt_image_url && !orderData.receipt_image_url.startsWith('data:')) {
           const { data: urlData } = await supabase.storage
             .from('receipts')
-            .createSignedUrl(orderData.receipt_image_url, 3600); // 1 hour
+            .createSignedUrl(orderData.receipt_image_url, 3600);
           
           if (urlData?.signedUrl) {
             setReceiptImage(urlData.signedUrl);
           }
         } else {
-          // Legacy base64 data (for backwards compatibility)
           setReceiptImage(orderData.receipt_image_url);
         }
 
-        // Fetch order items
         const { data: itemsData } = await supabase
           .from('order_items')
           .select('*, product:products(*)')
@@ -84,7 +83,6 @@ const DriverOrderDetails = () => {
           setOrderItems(itemsData as OrderItem[]);
         }
 
-        // Fetch customer - use public_profiles view for limited info (name, avatar only)
         const { data: customerData } = await supabase
           .from('public_profiles')
           .select('*')
@@ -95,7 +93,6 @@ const DriverOrderDetails = () => {
           setCustomer(customerData as Profile);
         }
 
-        // Fetch customer phone from profiles (driver can see after accepting order)
         const { data: phoneData } = await supabase
           .from('profiles')
           .select('phone')
@@ -105,7 +102,7 @@ const DriverOrderDetails = () => {
         if (phoneData?.phone) {
           setCustomerPhone(phoneData.phone);
         }
-        // Fetch existing item issues for this order
+
         const { data: issuesData } = await supabase
           .from('order_item_issues')
           .select('order_item_id')
@@ -120,6 +117,24 @@ const DriverOrderDetails = () => {
     };
 
     fetchOrder();
+
+    // Subscribe to order updates for real-time sync
+    const orderChannel = supabase
+      .channel(`driver-order-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Order updated:', payload);
+          setOrder(prev => prev ? { ...prev, ...payload.new } as Order : null);
+        }
+      )
+      .subscribe();
 
     // Subscribe to item issues
     const issueChannel = supabase
@@ -145,6 +160,7 @@ const DriverOrderDetails = () => {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(orderChannel);
       supabase.removeChannel(issueChannel);
     };
   }, [id]);
@@ -153,7 +169,6 @@ const DriverOrderDetails = () => {
     const file = event.target.files?.[0];
     if (!file || !order || !user) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid File',
@@ -166,7 +181,6 @@ const DriverOrderDetails = () => {
     setIsUploading(true);
 
     try {
-      // Compress image to max 1200px width and 70% quality
       toast({
         title: 'Processing Image',
         description: 'Compressing image for upload...',
@@ -180,9 +194,7 @@ const DriverOrderDetails = () => {
       });
 
       const compressedSizeMB = getFileSizeInMB(compressedBlob);
-      console.log(`Original: ${getFileSizeInMB(file).toFixed(2)}MB, Compressed: ${compressedSizeMB.toFixed(2)}MB`);
 
-      // Final size check (should always be under 5MB after compression)
       if (compressedSizeMB > 5) {
         toast({
           title: 'Image Too Large',
@@ -193,10 +205,8 @@ const DriverOrderDetails = () => {
         return;
       }
 
-      // Generate unique file path: {driver_id}/{order_id}/{timestamp}.jpg
       const filePath = `${user.id}/${order.id}/${Date.now()}.jpg`;
 
-      // Upload compressed image to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, compressedBlob, {
@@ -207,7 +217,6 @@ const DriverOrderDetails = () => {
 
       if (uploadError) throw uploadError;
 
-      // Store the path in the database (not base64)
       const { error: updateError } = await supabase
         .from('orders')
         .update({ receipt_image_url: filePath })
@@ -215,7 +224,6 @@ const DriverOrderDetails = () => {
 
       if (updateError) throw updateError;
 
-      // Get signed URL for immediate display
       const { data: urlData } = await supabase.storage
         .from('receipts')
         .createSignedUrl(filePath, 3600);
@@ -225,7 +233,7 @@ const DriverOrderDetails = () => {
       }
 
       toast({
-        title: 'Receipt Uploaded',
+        title: 'Receipt Uploaded ✓',
         description: 'You can now start the delivery',
       });
     } catch (error: any) {
@@ -243,7 +251,6 @@ const DriverOrderDetails = () => {
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     if (!order) return;
 
-    // Block "in_transit" if no receipt uploaded
     if (newStatus === 'in_transit' && !receiptImage) {
       toast({
         title: 'Receipt Required',
@@ -253,7 +260,6 @@ const DriverOrderDetails = () => {
       return;
     }
 
-    // Block "in_transit" if load safety not confirmed
     if (newStatus === 'in_transit' && !loadSafetyConfirmed) {
       toast({
         title: 'Safety Confirmation Required',
@@ -266,8 +272,6 @@ const DriverOrderDetails = () => {
     setIsUpdating(true);
 
     try {
-      // Use secure server-side function for delivery completion
-      // This atomically updates order status, creates payout record, and updates wallet
       if (newStatus === 'delivered') {
         const { error } = await supabase.rpc('complete_order_delivery', {
           p_order_id: order.id,
@@ -281,7 +285,6 @@ const DriverOrderDetails = () => {
         });
         navigate('/driver');
       } else {
-        // For other status updates, use direct update
         const { error } = await supabase
           .from('orders')
           .update({ status: newStatus })
@@ -324,7 +327,6 @@ const DriverOrderDetails = () => {
     }
   };
 
-  // Open Google Maps with customer's coordinates
   const handleNavigateToCustomer = () => {
     if (order?.delivery_latitude && order?.delivery_longitude) {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`;
@@ -332,38 +334,16 @@ const DriverOrderDetails = () => {
     }
   };
 
-  // Call customer
-  const handleCallCustomer = () => {
-    if (customerPhone) {
-      window.location.href = `tel:${customerPhone}`;
-    } else {
-      toast({
-        title: 'Phone Not Available',
-        description: 'Customer phone number is not available.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const isShoprite = order?.supermarket?.name?.toLowerCase().includes('shoprite');
   const fundsConfirmed = order?.funds_confirmed || false;
 
-  // Shoprite: Show "Request Funds" after items picked (shopping_completed), then upload receipt
-  // Others: Just upload receipt after shopping, then confirm tally
+  // Workflow order for Shoprite:
+  // 1. Done shopping -> Request Funds
+  // 2. Funds confirmed -> Pay at till -> Upload Receipt
+  // 3. Receipt uploaded + safety confirmed -> Start Delivery
   const canShowReceiptUpload = isShoprite 
-    ? fundsConfirmed && (order?.status === 'shopping_completed')
-    : (order?.status === 'shopping' || order?.status === 'shopping_completed');
-
-  // Shoprite requires funds before moving to in_transit
-  // Other stores just need receipt
-  const canAdvanceFromShopping = isShoprite
-    ? fundsConfirmed
-    : true;
-
-  // For Shoprite, show "Request Funds" button when shopping_completed but not yet funded
-  const showShopriteFundingButton = isShoprite && 
-    order?.status === 'shopping_completed' && 
-    !fundsConfirmed;
+    ? fundsConfirmed && order?.status === 'shopping_completed'
+    : order?.status === 'shopping' || order?.status === 'shopping_completed';
 
   if (isLoading || !order) {
     return (
@@ -375,9 +355,10 @@ const DriverOrderDetails = () => {
 
   const nextStatus = getNextStatus();
   const canStartDelivery = order.status === 'shopping_completed';
+  const hasDeliveryCoords = !!(order.delivery_latitude && order.delivery_longitude);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-44">
       {/* Header */}
       <div className="gradient-primary px-4 py-4">
         <div className="flex items-center gap-3">
@@ -409,7 +390,7 @@ const DriverOrderDetails = () => {
         </div>
       </div>
 
-      {/* Estimated Package Size - Vehicle Compatibility */}
+      {/* Estimated Package Size */}
       <div className="mx-4 bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -432,25 +413,6 @@ const DriverOrderDetails = () => {
         )}
       </div>
 
-      {/* Shoprite Till Request - Show after done shopping but before delivery */}
-      {showShopriteFundingButton && (
-        <div className="mx-4 mb-4 bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">💰</span>
-            <h3 className="font-bold text-orange-800">Request Till Funds</h3>
-          </div>
-          <p className="text-sm text-orange-700 mb-3">
-            Items loaded. Request funds to pay at the till.
-          </p>
-          <Button 
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-            onClick={() => setShowTillFunding(true)}
-          >
-            Request Funds for Till
-          </Button>
-        </div>
-      )}
-
       {/* Funds Confirmed Badge for Shoprite */}
       {isShoprite && fundsConfirmed && (
         <div className="mx-4 mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
@@ -459,68 +421,45 @@ const DriverOrderDetails = () => {
         </div>
       )}
 
-      {/* Customer Info with Call Button */}
-      <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
-        <h3 className="font-semibold mb-3">Customer</h3>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              {customer?.avatar_url ? (
-                <img src={customer.avatar_url} alt={customer?.full_name || ''} className="w-full h-full rounded-full object-cover" />
-              ) : (
-                '👤'
-              )}
-            </div>
-            <div>
-              <p className="font-medium">{customer?.full_name || 'Customer'}</p>
-              {customerPhone && (
-                <p className="text-sm text-muted-foreground">{customerPhone}</p>
-              )}
-            </div>
-          </div>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="border-primary text-primary"
-            onClick={handleCallCustomer}
-          >
-            <Phone className="h-4 w-4 mr-1" />
-            Call
-          </Button>
-        </div>
-      </div>
+      {/* Customer Contact Card with Prominent Phone */}
+      <CustomerContactCard
+        customer={customer}
+        customerPhone={customerPhone}
+        onOpenChat={() => setIsChatOpen(true)}
+      />
 
-      {/* Delivery Address */}
+      {/* Delivery Address - Show navigation button when in_transit */}
       <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
         <h3 className="font-semibold mb-2 flex items-center gap-2">
           <MapPin className="h-4 w-4 text-primary" />
           Delivery Address
         </h3>
-        <p className="text-sm">{order.delivery_address}</p>
+        <p className="text-sm mb-3">{order.delivery_address}</p>
         
-        {/* Navigate to Customer button - only shown when in_transit */}
-        {order.status === 'in_transit' && order.delivery_latitude && order.delivery_longitude && (
+        {order.status === 'in_transit' && hasDeliveryCoords && (
           <Button 
-            className="w-full mt-3 bg-blue-600 hover:bg-blue-700" 
+            className="w-full bg-blue-600 hover:bg-blue-700" 
             onClick={handleNavigateToCustomer}
           >
             <Navigation className="h-4 w-4 mr-2" />
-            Navigate to Customer
+            Open in Maps
           </Button>
         )}
       </div>
 
-      {/* Store */}
-      <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
-        <h3 className="font-semibold mb-2">Store</h3>
-        <p className="font-medium">{order.supermarket?.name}</p>
-        {order.supermarket?.branch && (
-          <p className="text-sm text-muted-foreground">{order.supermarket.branch}</p>
-        )}
-        {order.supermarket?.address && (
-          <p className="text-sm text-muted-foreground mt-1">{order.supermarket.address}</p>
-        )}
-      </div>
+      {/* Store - Hide when in_transit to focus on delivery */}
+      {order.status !== 'in_transit' && (
+        <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
+          <h3 className="font-semibold mb-2">Store</h3>
+          <p className="font-medium">{order.supermarket?.name}</p>
+          {order.supermarket?.branch && (
+            <p className="text-sm text-muted-foreground">{order.supermarket.branch}</p>
+          )}
+          {order.supermarket?.address && (
+            <p className="text-sm text-muted-foreground mt-1">{order.supermarket.address}</p>
+          )}
+        </div>
+      )}
 
       {/* Shopping List */}
       <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
@@ -574,7 +513,7 @@ const DriverOrderDetails = () => {
         </div>
       </div>
 
-      {/* Receipt Upload - Hidden for Shoprite until funds confirmed */}
+      {/* Receipt Upload - Only show when appropriate in workflow */}
       {canShowReceiptUpload && (
         <div className="mx-4 bg-card rounded-xl border border-border p-4 mb-4">
           <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -643,62 +582,26 @@ const DriverOrderDetails = () => {
         </div>
       )}
 
-      {/* Action Button */}
-      {nextStatus && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4">
-          {/* Show warning if Shoprite and funds not confirmed when trying to start delivery */}
-          {isShoprite && order.status === 'shopping_completed' && !fundsConfirmed && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <p className="text-sm text-amber-700">
-                Request till funds before starting delivery
-              </p>
-            </div>
-          )}
-
-          {canStartDelivery && !receiptImage && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <p className="text-sm text-amber-700">
-                Upload receipt photo to unlock "Start Delivery"
-              </p>
-            </div>
-          )}
-
-          {canStartDelivery && receiptImage && !loadSafetyConfirmed && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <p className="text-sm text-amber-700">
-                Confirm load safety to start delivery
-              </p>
-            </div>
-          )}
-          
-          <Button
-            className="w-full h-14 text-lg"
-            onClick={() => handleStatusUpdate(nextStatus)}
-            disabled={
-              isUpdating || 
-              (canStartDelivery && !receiptImage) || 
-              (canStartDelivery && !loadSafetyConfirmed) ||
-              // Block starting delivery for Shoprite until funds received
-              (isShoprite && order.status === 'shopping_completed' && !fundsConfirmed && nextStatus === 'in_transit')
-            }
-          >
-            {isUpdating ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              getNextStatusLabel(nextStatus)
-            )}
-          </Button>
-        </div>
+      {/* Fixed Bottom Action Bar */}
+      {order.status !== 'delivered' && (
+        <DriverActionBar
+          orderStatus={order.status}
+          nextStatus={nextStatus}
+          isShoprite={!!isShoprite}
+          fundsConfirmed={fundsConfirmed}
+          hasReceipt={!!receiptImage}
+          loadSafetyConfirmed={loadSafetyConfirmed}
+          isUpdating={isUpdating}
+          hasDeliveryCoords={hasDeliveryCoords}
+          onStatusUpdate={handleStatusUpdate}
+          onRequestFunds={() => setShowTillFunding(true)}
+          onNavigateToCustomer={handleNavigateToCustomer}
+          getNextStatusLabel={getNextStatusLabel}
+        />
       )}
 
       {order.status === 'delivered' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-green-500 p-4 text-center">
+        <div className="fixed bottom-0 left-0 right-0 bg-green-500 p-4 text-center z-40">
           <CheckCircle className="h-6 w-6 text-white mx-auto mb-2" />
           <p className="text-white font-semibold">Order Completed!</p>
           <p className="text-white/80 text-sm">K{order.driver_payout?.toFixed(2)} added to your wallet</p>
@@ -713,7 +616,6 @@ const DriverOrderDetails = () => {
           order={order}
           onFundsConfirmed={() => {
             setShowTillFunding(false);
-            // Refresh order to get updated funds_confirmed state
             setOrder({ ...order, funds_confirmed: true });
           }}
         />
